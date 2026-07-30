@@ -193,8 +193,16 @@
     </transition>
 
     <div class="pp-bar__wrap">
+      <!-- Collapsed handle to bring the sub-nav back -->
+      <div v-if="stripAvailable && !stripOpen" class="pp-handle__row">
+        <button type="button" class="pp-handle" :aria-label="content.reopenLabel || 'Show pages'" @click="stripOpen = true">
+          <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('chevron-up')"></path></svg>
+          <span>{{ content.reopenLabel || 'Pages' }}</span>
+        </button>
+      </div>
+
       <!-- Contextual sub-nav strip -->
-      <div v-if="content.showContextual !== false && contextChildren.length" class="pp-context">
+      <div v-if="stripAvailable && stripOpen" class="pp-context">
         <div class="pp-context__scroll">
           <component
             :is="ch.href ? 'a' : 'button'"
@@ -211,6 +219,16 @@
             <span v-if="badgeNum(ch) > 0" class="pp-badge pp-badge--inline">{{ badgeText(ch) }}</span>
           </component>
         </div>
+        <button
+          v-if="content.showStripClose !== false"
+          type="button"
+          class="pp-context__x"
+          :aria-label="content.closeStripLabel || 'Hide pages'"
+          :title="content.closeStripLabel || 'Hide pages'"
+          @click="stripOpen = false"
+        >
+          <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('x')"></path></svg>
+        </button>
       </div>
 
       <!-- Primary bottom bar -->
@@ -290,6 +308,7 @@ export default {
       curId: this.initId(),
       curChild: this.content.activeChildId != null ? String(this.content.activeChildId) : null,
       sheetOpen: false,
+      stripOpen: true,
       notifOpen: false,
       notifPos: { bottom: 80 },
       // ---- IT support ticket ----
@@ -311,8 +330,22 @@ export default {
     try {
       this.screenshotSupported = !!(navigator && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
     } catch (e) { this.screenshotSupported = false; }
+    try {
+      this._onDocDown = (e) => {
+        if (!this.stripOpen || this.content.closeStripOnOutside === false) return;
+        const root = this.$el;
+        if (root && root.contains && e && e.target && root.contains(e.target)) return;
+        this.stripOpen = false;
+      };
+      document.addEventListener("pointerdown", this._onDocDown, true);
+    } catch (e) {}
+  },
+  beforeUnmount() {
+    try { if (this._onDocDown) document.removeEventListener("pointerdown", this._onDocDown, true); } catch (e) {}
   },
   watch: {
+    // Landing on a different destination reveals its sub-pages again.
+    curId() { this.stripOpen = true; },
     "content.activeId"(v) { if (v != null && v !== "") this.curId = String(v); },
     "content.activeChildId"(v) { this.curChild = v != null && v !== "" ? String(v) : null; },
   },
@@ -369,6 +402,7 @@ export default {
       return [];
     },
     unreadCount() { return this.notifItems.filter((n) => !this.isRead(n)).length; },
+    stripAvailable() { return this.content.showContextual !== false && this.contextChildren.length > 0; },
     activeItem() { return this.items.find((i) => i.id === this.curId) || null; },
     // Sub-pages come from a flat top-level `subPages` array (each row carries a
     // `parent` id) — this keeps the WeWeb config one level deep. Falls back to a
@@ -657,8 +691,17 @@ export default {
 .pp-bar__wrap { max-width: var(--pp-max); margin: 0 auto; }
 
 /* Contextual sub-nav strip */
-.pp-context { background: var(--surface-2); border-top: 1px solid var(--border); }
-.pp-context__scroll { display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto; scrollbar-width: none; }
+.pp-context { background: var(--surface-2); border-top: 1px solid var(--border); display: flex; align-items: center; }
+.pp-context__scroll { flex: 1; min-width: 0; display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto; scrollbar-width: none; }
+.pp-context__x { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-right: 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-subtle); cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
+.pp-context__x:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
+.pp-context__x .pp-svg { width: 14px; height: 14px; }
+
+/* Collapsed handle */
+.pp-handle__row { display: flex; justify-content: center; padding: 0 12px 6px; }
+.pp-handle { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-muted); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-up); transition: color .15s, border-color .15s; }
+.pp-handle:hover { color: var(--primary); border-color: var(--primary); }
+.pp-handle .pp-svg { width: 14px; height: 14px; }
 .pp-context__scroll::-webkit-scrollbar { display: none; }
 .pp-tab { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
 .pp-tab:hover { color: var(--text); border-color: var(--border-strong); }

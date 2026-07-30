@@ -187,6 +187,10 @@ export default {
     // ---- Behavior / layout ----
     maxBarItems: { label: { en: "Max items in bar (incl. More)" }, type: "Number", options: { min: 3, max: 6, step: 1 }, defaultValue: 5, bindable: true },
     showContextual: { label: { en: "Show sub-page strip" }, type: "OnOff", defaultValue: true, bindable: true },
+    showStripClose: { label: { en: "Show sub-nav close (X)" }, type: "OnOff", defaultValue: true, bindable: true },
+    closeStripOnOutside: { label: { en: "Close sub-nav on outside click" }, type: "OnOff", defaultValue: true, bindable: true },
+    closeStripLabel: { label: { en: "Sub-nav close tooltip" }, type: "Text", defaultValue: "Hide pages", bindable: true },
+    reopenLabel: { label: { en: "Sub-nav reopen label" }, type: "Text", defaultValue: "Pages", bindable: true },
     showLabels: { label: { en: "Show bar labels" }, type: "OnOff", defaultValue: true, bindable: true },
     fixed: { label: { en: "Pin to bottom of screen" }, type: "OnOff", defaultValue: true, bindable: true },
     maxWidth: { label: { en: "Max width (px, desktop)" }, type: "Number", options: { min: 320, max: 1600, step: 10 }, defaultValue: 640, bindable: true },
