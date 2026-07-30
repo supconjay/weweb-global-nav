@@ -46,6 +46,7 @@ export default {
         { id: "vendors", label: "Vendors", icon: "truck", kind: "portal", inBar: true },
         { id: "notifications", label: "Notifications", icon: "bell", kind: "hub", inBar: false, badge: 3, popover: "notifications" },
         { id: "tasks", label: "Tasks", icon: "check-square", kind: "hub", inBar: false, badge: 1 },
+        { id: "margin-review", label: "Margin Review", icon: "dollar", kind: "hub", inBar: false },
         { id: "vendor-calendar", label: "Vendor Calendar", icon: "calendar", kind: "hub", inBar: false },
         { id: "price-guide", label: "Price Guide", icon: "book", kind: "hub", inBar: false },
         { id: "reporting", label: "Reporting", icon: "chart", kind: "portal", inBar: false },

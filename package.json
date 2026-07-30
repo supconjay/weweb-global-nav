@@ -2,8 +2,8 @@
   "name": "pp-nav",
   "version": "0.0.1",
   "scripts": {
-    "build": "weweb build --name=pp-nav --type=wwobject",
-    "serve": "weweb serve --type=wwobject"
+    "build": "weweb build --name=pp-nav --type=section",
+    "serve": "weweb serve --type=section"
   },
   "devDependencies": {
     "@weweb/cli": "latest"
