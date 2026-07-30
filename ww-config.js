@@ -11,6 +11,9 @@ export default {
     //   kind:   "portal" (main workspace) | "hub" (quick-access global tool)
     //   inBar:  true -> show directly in the bottom bar; the rest go under "More"
     //   badge:  number (or bindable) -> red count bubble (Notifications, Tasks...)
+    //   href:   set the destination URL/path -> the item renders as a real <a> so
+    //           right-click / middle-click / cmd-click open it in a new tab.
+    //           Plain left-click still fires `navigate` for fast in-app routing.
     // icon names: home, bell, check-square, calendar, book, briefcase, users, truck,
     //   chart, shield, grid, folder, wrench, map, dollar, clipboard, layers, compass,
     //   send, target, dot
@@ -27,6 +30,7 @@ export default {
               kind: { label: "Kind (portal/hub)", type: "Text" },
               inBar: { label: "Show in bottom bar", type: "OnOff" },
               badge: { label: "Badge count", type: "Number" },
+              href: { label: "Link URL (enables new-tab)", type: "Text" },
             },
           },
         },
@@ -60,6 +64,7 @@ export default {
               label: { label: "Label", type: "Text" },
               icon: { label: "Icon name (optional)", type: "Text" },
               badge: { label: "Badge count", type: "Number" },
+              href: { label: "Link URL (enables new-tab)", type: "Text" },
             },
           },
         },

@@ -12,20 +12,22 @@
             <div v-if="grp.items.length" class="pp-sheet__group">
               <div class="pp-sheet__grouplabel">{{ grp.label }}</div>
               <div class="pp-sheet__grid">
-                <button
+                <component
+                  :is="it.href ? 'a' : 'button'"
                   v-for="it in grp.items"
                   :key="it.id"
-                  type="button"
+                  :href="it.href || undefined"
+                  :type="it.href ? undefined : 'button'"
                   class="pp-sheet__item"
                   :class="{ 'pp-sheet__item--active': it.id === curId }"
-                  @click="select(it)"
+                  @click="onSelect(it, $event)"
                 >
                   <span class="pp-sheet__ico">
                     <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(it.icon)"></path></svg>
                     <span v-if="badgeNum(it) > 0" class="pp-badge">{{ badgeText(it) }}</span>
                   </span>
                   <span class="pp-sheet__label">{{ it.label }}</span>
-                </button>
+                </component>
               </div>
             </div>
           </template>
@@ -37,37 +39,41 @@
       <!-- Contextual sub-nav strip -->
       <div v-if="content.showContextual !== false && contextChildren.length" class="pp-context">
         <div class="pp-context__scroll">
-          <button
+          <component
+            :is="ch.href ? 'a' : 'button'"
             v-for="ch in contextChildren"
             :key="ch.id"
-            type="button"
+            :href="ch.href || undefined"
+            :type="ch.href ? undefined : 'button'"
             class="pp-tab"
             :class="{ 'pp-tab--active': ch.id === curChild }"
-            @click="selectChild(ch)"
+            @click="onSelectChild(ch, $event)"
           >
             <svg v-if="ch.icon" class="pp-svg pp-tab__ico" v-bind="svgAttrs"><path :d="ic(ch.icon)"></path></svg>
             <span>{{ ch.label }}</span>
             <span v-if="badgeNum(ch) > 0" class="pp-badge pp-badge--inline">{{ badgeText(ch) }}</span>
-          </button>
+          </component>
         </div>
       </div>
 
       <!-- Primary bottom bar -->
       <nav class="pp-bar" :aria-label="content.ariaLabel || 'Primary'">
-        <button
+        <component
+          :is="it.href ? 'a' : 'button'"
           v-for="it in barItems"
           :key="it.id"
-          type="button"
+          :href="it.href || undefined"
+          :type="it.href ? undefined : 'button'"
           class="pp-item"
           :class="{ 'pp-item--active': it.id === curId }"
-          @click="select(it)"
+          @click="onSelect(it, $event)"
         >
           <span class="pp-item__ico">
             <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(it.icon)"></path></svg>
             <span v-if="badgeNum(it) > 0" class="pp-badge">{{ badgeText(it) }}</span>
           </span>
           <span v-if="content.showLabels !== false" class="pp-item__label">{{ it.label }}</span>
-        </button>
+        </component>
 
         <button
           v-if="hasMore"
@@ -139,8 +145,9 @@ export default {
           kind: i.kind === "hub" ? "hub" : "portal",
           inBar: i.inBar === true,
           badge: i.badge,
+          href: i.href || null,
           children: Array.isArray(i.children)
-            ? i.children.filter((c) => c && c.id != null && c.id !== "").map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge }))
+            ? i.children.filter((c) => c && c.id != null && c.id !== "").map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge, href: c.href || null }))
             : [],
         }));
     },
@@ -177,7 +184,7 @@ export default {
       const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
       const mine = flat
         .filter((s) => s && s.id != null && s.id !== "" && s.hidden !== true && String(s.parent) === String(this.curId))
-        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge }));
+        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge, href: s.href || null }));
       if (mine.length) return mine;
       return this.activeItem ? this.activeItem.children : [];
     },
@@ -210,6 +217,21 @@ export default {
       return isFinite(n) ? n : (b ? 1 : 0);
     },
     badgeText(it) { const n = this.badgeNum(it); return n > 99 ? "99+" : String(n); },
+    // Let the browser handle new-tab / new-window gestures (ctrl/cmd/shift/alt +
+    // click, or middle-click) natively when the item is a real <a href>.
+    isModifiedClick(e) {
+      return !!e && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (typeof e.button === "number" && e.button !== 0));
+    },
+    onSelect(it, e) {
+      if (it && it.href && this.isModifiedClick(e)) return; // native open-in-new-tab
+      if (it && it.href && e) e.preventDefault();
+      this.select(it);
+    },
+    onSelectChild(ch, e) {
+      if (ch && ch.href && this.isModifiedClick(e)) return;
+      if (ch && ch.href && e) e.preventDefault();
+      this.selectChild(ch);
+    },
     select(it) {
       if (!it) return;
       this.curId = it.id;
@@ -291,6 +313,7 @@ export default {
 .pp-sheet__label { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.25; }
 
 .pp-svg { display: block; }
+.pp-root a { text-decoration: none; color: inherit; }
 
 .pp-fade-enter-active, .pp-fade-leave-active { transition: opacity .2s; }
 .pp-fade-enter-from, .pp-fade-leave-to { opacity: 0; }
