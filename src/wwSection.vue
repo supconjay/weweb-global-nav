@@ -220,7 +220,10 @@
           </div>
         </div>
         <div v-if="content.showMarkAll !== false && notifItems.length" class="pp-notif__foot">
-          <button type="button" class="pp-notif__markall" @click="emitMarkAll">{{ content.markAllLabel || 'Mark All as Read' }}</button>
+          <button type="button" class="pp-notif__markall" :disabled="unreadCount === 0" @click="emitMarkAll">
+            <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('check-circle')"></path></svg>
+            <span>{{ content.markAllLabel || 'Mark all as read' }}</span>
+          </button>
         </div>
       </div>
     </transition>
@@ -1008,9 +1011,11 @@ select.pp-in { appearance: none; cursor: pointer; }
 .pp-notif__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px; }
 .pp-notif__empty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 34px 16px; color: var(--text-subtle); }
 .pp-notif__empty .pp-svg { width: 26px; height: 26px; }
-.pp-notif__foot { padding: 12px 16px; border-top: 1px solid var(--border); }
-.pp-notif__markall { width: 100%; padding: 10px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: filter .15s; }
-.pp-notif__markall:hover { filter: brightness(1.05); }
+.pp-notif__foot { display: flex; justify-content: center; padding: 8px; border-top: 1px solid var(--border); }
+.pp-notif__markall { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border: none; border-radius: 9px; background: transparent; color: var(--primary); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; }
+.pp-notif__markall:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.pp-notif__markall:disabled { color: var(--text-subtle); cursor: default; }
+.pp-notif__markall .pp-svg { width: 15px; height: 15px; }
 .pp-pop-enter-active, .pp-pop-leave-active { transition: opacity .18s, transform .18s; }
 .pp-pop-enter-from, .pp-pop-leave-to { opacity: 0; transform: translateX(-50%) translateY(10px); }
 

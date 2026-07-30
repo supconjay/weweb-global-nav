@@ -164,7 +164,7 @@ export default {
     showViewAll: { label: { en: "Show 'View All'" }, type: "OnOff", defaultValue: true, bindable: true },
     viewAllLabel: { label: { en: "'View All' label" }, type: "Text", defaultValue: "View All", bindable: true },
     showMarkAll: { label: { en: "Show 'Mark All as Read'" }, type: "OnOff", defaultValue: true, bindable: true },
-    markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark All as Read", bindable: true },
+    markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark all as read", bindable: true },
     notifEmptyText: { label: { en: "Empty text" }, type: "Text", defaultValue: "You're all caught up", bindable: true },
 
     // ---- IT support ticket (button at the bottom of the More sheet) ----
