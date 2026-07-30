@@ -149,6 +149,13 @@ export default {
     // ---- IT support ticket (button at the bottom of the More sheet) ----
     // Submitting fires `supportSubmit` with the form values plus the raw File
     // objects (event.files) — feed those to your upload/create-ticket workflow.
+    // Settings sits beside IT Support at the bottom of the More sheet. It fires
+    // the normal `navigate` event, so your existing navigate workflow routes it —
+    // just set settingsId to the Settings page id/UUID.
+    showSettings: { label: { en: "Show Settings in More" }, type: "OnOff", defaultValue: true, bindable: true },
+    settingsLabel: { label: { en: "Settings label" }, type: "Text", defaultValue: "Settings", bindable: true },
+    settingsId: { label: { en: "Settings page id" }, type: "Text", defaultValue: "settings", bindable: true },
+
     showSupport: { label: { en: "Show IT support in More" }, type: "OnOff", defaultValue: true, bindable: true },
     supportLabel: { label: { en: "Support button label" }, type: "Text", defaultValue: "IT Support", bindable: true },
     supportSubLabel: { label: { en: "Support button subtext" }, type: "Text", defaultValue: "Report a problem or request help", bindable: true },

@@ -31,13 +31,26 @@
               </div>
             </div>
           </template>
-          <button v-if="content.showSupport !== false" type="button" class="pp-supportbtn" @click="openSupport">
-            <span class="pp-supportbtn__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('lifebuoy')"></path></svg></span>
-            <span class="pp-supportbtn__txt">
-              <strong>{{ content.supportLabel || 'IT Support' }}</strong>
-              <small>{{ content.supportSubLabel || 'Report a problem or request help' }}</small>
-            </span>
-          </button>
+          <div v-if="content.showSupport !== false || content.showSettings !== false" class="pp-sheet__foot">
+            <button v-if="content.showSupport !== false" type="button" class="pp-supportbtn" @click="openSupport">
+              <span class="pp-supportbtn__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('lifebuoy')"></path></svg></span>
+              <span class="pp-supportbtn__txt">
+                <strong>{{ content.supportLabel || 'IT Support' }}</strong>
+                <small>{{ content.supportSubLabel || 'Report a problem or request help' }}</small>
+              </span>
+            </button>
+            <button
+              v-if="content.showSettings !== false"
+              type="button"
+              class="pp-settingsbtn"
+              :title="content.settingsLabel || 'Settings'"
+              :aria-label="content.settingsLabel || 'Settings'"
+              @click="openSettings"
+            >
+              <span class="pp-settingsbtn__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('cog')"></path></svg></span>
+              <span class="pp-settingsbtn__txt">{{ content.settingsLabel || 'Settings' }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </transition>
@@ -288,6 +301,7 @@ const ICONS = {
   paperclip: "M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48",
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
   camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  cog: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
   image: "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21",
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6",
 };
@@ -534,6 +548,15 @@ export default {
       const out = arr.map((s) => String(s).trim()).filter(Boolean);
       return out.length ? out : fallback;
     },
+    // Routes through the same `navigate` workflow as every other destination.
+    openSettings() {
+      this.sheetOpen = false;
+      const id = this.content.settingsId != null && this.content.settingsId !== "" ? String(this.content.settingsId) : "settings";
+      const label = this.content.settingsLabel || "Settings";
+      this.curId = id;
+      this.curChild = null;
+      this.$emit("trigger-event", { name: "navigate", event: { id, kind: "hub", label, item: { id, label, icon: "cog", kind: "hub" } } });
+    },
     openSupport() {
       this.sheetOpen = false;
       this.notifOpen = false;
@@ -745,8 +768,15 @@ export default {
 .pp-svg { display: block; }
 .pp-root a { text-decoration: none; color: inherit; }
 
-/* Support entry in the More sheet */
-.pp-supportbtn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-top: 2px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font-family: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
+/* Support + settings row at the bottom of the More sheet */
+.pp-sheet__foot { display: flex; align-items: stretch; gap: 8px; margin-top: 2px; }
+.pp-settingsbtn { flex: none; width: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font-family: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+.pp-settingsbtn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.pp-settingsbtn__ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--surface-3); color: var(--text-muted); }
+.pp-settingsbtn:hover .pp-settingsbtn__ico { color: var(--primary); }
+.pp-settingsbtn__ico .pp-svg { width: 20px; height: 20px; }
+.pp-settingsbtn__txt { font-size: 12px; font-weight: 600; }
+.pp-supportbtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font-family: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
 .pp-supportbtn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, transparent); }
 .pp-supportbtn__ico { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
 .pp-supportbtn__ico .pp-svg { width: 20px; height: 20px; }
