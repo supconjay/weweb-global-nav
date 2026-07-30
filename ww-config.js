@@ -3,6 +3,9 @@ export default {
   triggerEvents: [
     { name: "navigate", label: { en: "On destination selected" }, event: { id: "", kind: "portal", label: "", item: {} } },
     { name: "navigateChild", label: { en: "On sub-page selected" }, event: { parentId: "", id: "", label: "", child: {} } },
+    { name: "notificationClick", label: { en: "On notification click" }, event: { id: "", index: 0, notification: {} } },
+    { name: "viewAllNotifications", label: { en: "On 'View All' click" }, event: {} },
+    { name: "markAllRead", label: { en: "On 'Mark All as Read' click" }, event: {} },
   ],
   properties: {
     // ---- Navigation model ----
@@ -31,6 +34,7 @@ export default {
               inBar: { label: "Show in bottom bar", type: "OnOff" },
               badge: { label: "Badge count", type: "Number" },
               href: { label: "Link URL (enables new-tab)", type: "Text" },
+              popover: { label: "Popover (set to 'notifications')", type: "Text" },
             },
           },
         },
@@ -40,7 +44,7 @@ export default {
         { id: "jobs", label: "Jobs", icon: "briefcase", kind: "portal", inBar: true },
         { id: "customers", label: "Customers", icon: "users", kind: "portal", inBar: true },
         { id: "vendors", label: "Vendors", icon: "truck", kind: "portal", inBar: true },
-        { id: "notifications", label: "Notifications", icon: "bell", kind: "hub", inBar: false, badge: 3 },
+        { id: "notifications", label: "Notifications", icon: "bell", kind: "hub", inBar: false, badge: 3, popover: "notifications" },
         { id: "tasks", label: "Tasks", icon: "check-square", kind: "hub", inBar: false, badge: 1 },
         { id: "vendor-calendar", label: "Vendor Calendar", icon: "calendar", kind: "hub", inBar: false },
         { id: "price-guide", label: "Price Guide", icon: "book", kind: "hub", inBar: false },
@@ -85,6 +89,30 @@ export default {
         { parent: "vendors", id: "vendor-onboarding", label: "Onboarding", icon: "clipboard" },
       ],
     },
+
+    // ---- Notifications popover ----
+    // Give an item popover:"notifications" (e.g. the bell) — clicking it opens
+    // this panel instead of navigating. Bind the list below; wire the emitted
+    // events (notificationClick / viewAllNotifications / markAllRead) to workflows.
+    notifications: {
+      label: { en: "Notifications (list, bind)" }, type: "Array", bindable: true,
+      // Records: { id, title|text|message, created_at, read|is_read, avatar }
+      defaultValue: [
+        { id: "n1", text: "New work order assigned: JOB#4434 - 3", created_at: "2026-07-29T14:05:00+00:00", read: false, avatar: "" },
+        { id: "n2", text: "Estimate approved for 2777 Mathews Street", created_at: "2026-07-29T11:20:00+00:00", read: false, avatar: "" },
+        { id: "n3", text: "Vendor Check Electric confirmed scheduling", created_at: "2026-07-28T16:40:00+00:00", read: true, avatar: "" },
+      ],
+    },
+    notifTextField: { label: { en: "Field: notification text" }, type: "Text", defaultValue: "text", bindable: true, section: "settings" },
+    notifTimeField: { label: { en: "Field: notification time" }, type: "Text", defaultValue: "created_at", bindable: true, section: "settings" },
+    notifReadField: { label: { en: "Field: read flag" }, type: "Text", defaultValue: "read", bindable: true, section: "settings" },
+    notifAvatarField: { label: { en: "Field: avatar" }, type: "Text", defaultValue: "avatar", bindable: true, section: "settings" },
+    notifTitle: { label: { en: "Popover title" }, type: "Text", defaultValue: "Notifications", bindable: true },
+    showViewAll: { label: { en: "Show 'View All'" }, type: "OnOff", defaultValue: true, bindable: true },
+    viewAllLabel: { label: { en: "'View All' label" }, type: "Text", defaultValue: "View All", bindable: true },
+    showMarkAll: { label: { en: "Show 'Mark All as Read'" }, type: "OnOff", defaultValue: true, bindable: true },
+    markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark All as Read", bindable: true },
+    notifEmptyText: { label: { en: "Empty text" }, type: "Text", defaultValue: "You're all caught up", bindable: true },
 
     // ---- Active state (bind to your current route / page) ----
     activeId: { label: { en: "Active destination id (bind)" }, type: "Text", defaultValue: "jobs", bindable: true },

@@ -35,6 +35,51 @@
       </div>
     </transition>
 
+    <!-- Notifications popover -->
+    <transition name="pp-fade">
+      <div v-if="notifOpen" class="pp-notif__backdrop" @click="closeNotif"></div>
+    </transition>
+    <transition name="pp-pop">
+      <div v-if="notifOpen" class="pp-notif" :style="{ bottom: notifPos.bottom + 'px' }" role="dialog" aria-label="Notifications">
+        <div class="pp-notif__head">
+          <span class="pp-notif__title">
+            {{ content.notifTitle || 'Notifications' }}
+            <span v-if="unreadCount > 0" class="pp-notif__count">{{ unreadCount }}</span>
+          </span>
+          <button v-if="content.showViewAll !== false" type="button" class="pp-notif__viewall" @click="emitViewAll">{{ content.viewAllLabel || 'View All' }}</button>
+        </div>
+        <div class="pp-notif__body">
+          <template v-if="notifItems.length">
+            <button
+              v-for="(n, i) in notifItems"
+              :key="notifId(n) || i"
+              type="button"
+              class="pp-notif__item"
+              :class="{ 'pp-notif__item--unread': !isRead(n) }"
+              @click="onNotifClick(n, i)"
+            >
+              <span class="pp-notif__avatar">
+                <img v-if="notifAvatar(n)" :src="notifAvatar(n)" :alt="notifText(n)" />
+                <svg v-else class="pp-svg" v-bind="svgAttrs"><path :d="ic('bell')"></path></svg>
+              </span>
+              <span class="pp-notif__txt">
+                <span class="pp-notif__msg">{{ notifText(n) || 'Notification' }}</span>
+                <span v-if="notifTime(n)" class="pp-notif__time">{{ notifTime(n) }}</span>
+              </span>
+              <span v-if="!isRead(n)" class="pp-notif__dot"></span>
+            </button>
+          </template>
+          <div v-else class="pp-notif__empty">
+            <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('bell')"></path></svg>
+            <span>{{ content.notifEmptyText || "You're all caught up" }}</span>
+          </div>
+        </div>
+        <div v-if="content.showMarkAll !== false && notifItems.length" class="pp-notif__foot">
+          <button type="button" class="pp-notif__markall" @click="emitMarkAll">{{ content.markAllLabel || 'Mark All as Read' }}</button>
+        </div>
+      </div>
+    </transition>
+
     <div class="pp-bar__wrap">
       <!-- Contextual sub-nav strip -->
       <div v-if="content.showContextual !== false && contextChildren.length" class="pp-context">
@@ -127,6 +172,8 @@ export default {
       curId: this.initId(),
       curChild: this.content.activeChildId != null ? String(this.content.activeChildId) : null,
       sheetOpen: false,
+      notifOpen: false,
+      notifPos: { bottom: 80 },
     };
   },
   watch: {
@@ -146,6 +193,7 @@ export default {
           inBar: i.inBar === true,
           badge: i.badge,
           href: i.href || null,
+          popover: i.popover || null,
           children: Array.isArray(i.children)
             ? i.children.filter((c) => c && c.id != null && c.id !== "").map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge, href: c.href || null }))
             : [],
@@ -176,6 +224,13 @@ export default {
     },
     moreActive() { return this.moreList.some((i) => i.id === this.curId); },
     moreBadgeTotal() { return this.moreList.reduce((s, i) => s + (this.badgeNum(i) || 0), 0); },
+    notifItems() {
+      const raw = this.content.notifications;
+      if (Array.isArray(raw)) return raw;
+      if (raw && typeof raw === "object" && Array.isArray(raw.data)) return raw.data;
+      return [];
+    },
+    unreadCount() { return this.notifItems.filter((n) => !this.isRead(n)).length; },
     activeItem() { return this.items.find((i) => i.id === this.curId) || null; },
     // Sub-pages come from a flat top-level `subPages` array (each row carries a
     // `parent` id) — this keeps the WeWeb config one level deep. Falls back to a
@@ -223,6 +278,13 @@ export default {
       return !!e && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (typeof e.button === "number" && e.button !== 0));
     },
     onSelect(it, e) {
+      if (it && it.popover === "notifications") {
+        // ctrl/cmd/middle-click still opens the hub in a new tab if an href is set
+        if (it.href && this.isModifiedClick(e)) return;
+        if (e) e.preventDefault();
+        this.toggleNotif(e);
+        return;
+      }
       if (it && it.href && this.isModifiedClick(e)) return; // native open-in-new-tab
       if (it && it.href && e) e.preventDefault();
       this.select(it);
@@ -244,8 +306,48 @@ export default {
       this.curChild = ch.id;
       this.$emit("trigger-event", { name: "navigateChild", event: { parentId: this.curId, id: ch.id, label: ch.label, child: ch } });
     },
-    toggleSheet() { this.sheetOpen = !this.sheetOpen; },
+    toggleSheet() { this.sheetOpen = !this.sheetOpen; this.notifOpen = false; },
     closeSheet() { this.sheetOpen = false; },
+    // ---- notifications popover ----
+    str(v) { return v == null ? "" : String(v); },
+    field(n, key, fbs) {
+      if (!n) return "";
+      if (key && n[key] != null && n[key] !== "") return n[key];
+      for (let i = 0; i < (fbs || []).length; i++) { if (n[fbs[i]] != null && n[fbs[i]] !== "") return n[fbs[i]]; }
+      return "";
+    },
+    notifText(n) { return this.str(this.field(n, this.content.notifTextField, ["title", "text", "message", "body", "description"])); },
+    notifTime(n) {
+      const raw = this.field(n, this.content.notifTimeField, ["time", "created_at", "createdAt", "date"]);
+      if (!raw) return "";
+      const d = new Date(raw);
+      if (isNaN(d)) return String(raw);
+      return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    },
+    isRead(n) {
+      const v = this.field(n, this.content.notifReadField, ["read", "is_read", "readAt", "seen"]);
+      return v === true || v === 1 || v === "1" || /^(true|yes)$/i.test(String(v == null ? "" : v));
+    },
+    notifAvatar(n) { return this.str(this.field(n, this.content.notifAvatarField, ["avatar", "headshot", "image", "photo"])); },
+    notifId(n) { return this.field(n, "id", ["_id", "uuid", "key"]) || ""; },
+    toggleNotif(e) {
+      this.sheetOpen = false;
+      if (this.notifOpen) { this.notifOpen = false; return; }
+      const btn = e && e.currentTarget;
+      if (btn && btn.getBoundingClientRect) {
+        const rect = btn.getBoundingClientRect();
+        const vh = (typeof window !== "undefined" && window.innerHeight) || rect.top;
+        this.notifPos = { bottom: Math.round(vh - rect.top + 10) };
+      }
+      this.notifOpen = true;
+    },
+    closeNotif() { this.notifOpen = false; },
+    onNotifClick(n, i) {
+      this.notifOpen = false;
+      this.$emit("trigger-event", { name: "notificationClick", event: { id: this.notifId(n), index: i, notification: n } });
+    },
+    emitViewAll() { this.notifOpen = false; this.$emit("trigger-event", { name: "viewAllNotifications", event: {} }); },
+    emitMarkAll() { this.$emit("trigger-event", { name: "markAllRead", event: {} }); },
   },
 };
 </script>
@@ -314,6 +416,38 @@ export default {
 
 .pp-svg { display: block; }
 .pp-root a { text-decoration: none; color: inherit; }
+
+/* Notifications popover */
+.pp-notif__backdrop { position: fixed; inset: 0; z-index: 950; }
+.pp-notif {
+  position: fixed; z-index: 951; left: 50%; transform: translateX(-50%);
+  width: min(400px, calc(100vw - 20px)); max-height: 62vh; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px;
+  box-shadow: 0 14px 44px rgba(16, 24, 40, .24); overflow: hidden;
+}
+.pp-notif__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.pp-notif__title { font-size: 15px; font-weight: 700; color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+.pp-notif__count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; }
+.pp-notif__viewall { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-muted); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; }
+.pp-notif__viewall:hover { background: var(--surface-3); color: var(--text); }
+.pp-notif__body { overflow-y: auto; padding: 6px; }
+.pp-notif__item { width: 100%; display: flex; align-items: flex-start; gap: 11px; padding: 11px 10px; border: none; background: transparent; border-radius: 10px; cursor: pointer; text-align: left; font-family: inherit; transition: background .12s; }
+.pp-notif__item:hover { background: var(--surface-2); }
+.pp-notif__item--unread { background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.pp-notif__avatar { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; overflow: hidden; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.pp-notif__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pp-notif__avatar .pp-svg { width: 17px; height: 17px; }
+.pp-notif__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-notif__msg { font-size: 13.5px; color: var(--text); overflow-wrap: anywhere; }
+.pp-notif__time { font-size: 12px; color: var(--text-subtle); }
+.pp-notif__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px; }
+.pp-notif__empty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 34px 16px; color: var(--text-subtle); }
+.pp-notif__empty .pp-svg { width: 26px; height: 26px; }
+.pp-notif__foot { padding: 12px 16px; border-top: 1px solid var(--border); }
+.pp-notif__markall { width: 100%; padding: 10px; border: none; border-radius: 10px; background: var(--primary); color: #fff; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: filter .15s; }
+.pp-notif__markall:hover { filter: brightness(1.05); }
+.pp-pop-enter-active, .pp-pop-leave-active { transition: opacity .18s, transform .18s; }
+.pp-pop-enter-from, .pp-pop-leave-to { opacity: 0; transform: translateX(-50%) translateY(10px); }
 
 .pp-fade-enter-active, .pp-fade-leave-active { transition: opacity .2s; }
 .pp-fade-enter-from, .pp-fade-leave-to { opacity: 0; }
