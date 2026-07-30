@@ -181,6 +181,21 @@ export default {
     "content.activeChildId"(v) { this.curChild = v != null && v !== "" ? String(v) : null; },
   },
   computed: {
+    // Top-level bindable badge counts, keyed by the id of the destination (or
+    // sub-page) they belong to. Bind each to a collection count, e.g.
+    // collections.user_notifications.data.length. Overrides that row's own badge.
+    badgeOverrides() {
+      const map = {};
+      const add = (id, v) => {
+        if (id == null || id === "") return;
+        if (v == null || v === "") return;
+        map[String(id)] = v;
+      };
+      add(this.content.notificationsId || "notifications", this.content.notificationsBadge);
+      add(this.content.tasksId || "tasks", this.content.tasksBadge);
+      add(this.content.marginId || "margin-review", this.content.marginBadge);
+      return map;
+    },
     items() {
       const raw = Array.isArray(this.content.items) ? this.content.items : [];
       return raw
@@ -191,11 +206,11 @@ export default {
           icon: i.icon || "dot",
           kind: i.kind === "hub" ? "hub" : "portal",
           inBar: i.inBar === true,
-          badge: i.badge,
+          badge: this.badgeFor(i.id, i.badge),
           href: i.href || null,
           popover: i.popover || null,
           children: Array.isArray(i.children)
-            ? i.children.filter((c) => c && c.id != null && c.id !== "" && !this.truthy(c.hidden)).map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge, href: c.href || null }))
+            ? i.children.filter((c) => c && c.id != null && c.id !== "" && !this.truthy(c.hidden)).map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: this.badgeFor(c.id, c.badge), href: c.href || null }))
             : [],
         }));
     },
@@ -239,7 +254,7 @@ export default {
       const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
       const mine = flat
         .filter((s) => s && s.id != null && s.id !== "" && !this.truthy(s.hidden) && String(s.parent) === String(this.curId))
-        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge, href: s.href || null }));
+        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: this.badgeFor(s.id, s.badge), href: s.href || null }));
       if (mine.length) return mine;
       return this.activeItem ? this.activeItem.children : [];
     },
@@ -261,6 +276,11 @@ export default {
   methods: {
     ic(name) { return ICONS[name] || ICONS.dot; },
     truthy(v) { return v === true || v === 1 || v === "1" || /^(true|yes|on)$/i.test(String(v == null ? "" : v)); },
+    // Bound count for this id wins; otherwise fall back to the row's own badge.
+    badgeFor(id, own) {
+      const o = this.badgeOverrides[String(id)];
+      return o != null && o !== "" ? o : own;
+    },
     initId() {
       if (this.content && this.content.activeId != null && this.content.activeId !== "") return String(this.content.activeId);
       const first = (Array.isArray(this.content && this.content.items) ? this.content.items : []).find((i) => i && i.id != null && i.id !== "");

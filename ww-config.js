@@ -141,6 +141,34 @@ export default {
     markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark All as Read", bindable: true },
     notifEmptyText: { label: { en: "Empty text" }, type: "Text", defaultValue: "You're all caught up", bindable: true },
 
+    // ---- Live badge counts (bindable) ----
+    // Bind each count to a collection length, e.g.
+    //   collections.user_notifications?.data?.length
+    // The count is applied to the destination (or sub-page) whose id matches the
+    // matching "... id" field below, and overrides that row's own badge value.
+    // Leave a count empty to fall back to the row's static badge.
+    notificationsBadge: {
+      label: { en: "Notifications count (bind)" }, type: "Number", bindable: true, defaultValue: null,
+      /* wwEditor:start */
+      bindingValidation: { type: "number", tooltip: "Unread notifications, e.g. collections.user_notifications?.data?.length" },
+      /* wwEditor:end */
+    },
+    notificationsId: { label: { en: "↳ applies to id" }, type: "Text", defaultValue: "notifications", bindable: true, section: "settings" },
+    tasksBadge: {
+      label: { en: "Tasks count (bind)" }, type: "Number", bindable: true, defaultValue: null,
+      /* wwEditor:start */
+      bindingValidation: { type: "number", tooltip: "Open tasks, e.g. collections.my_tasks?.data?.length" },
+      /* wwEditor:end */
+    },
+    tasksId: { label: { en: "↳ applies to id" }, type: "Text", defaultValue: "tasks", bindable: true, section: "settings" },
+    marginBadge: {
+      label: { en: "Margin count (bind)" }, type: "Number", bindable: true, defaultValue: null,
+      /* wwEditor:start */
+      bindingValidation: { type: "number", tooltip: "Margin reviews, e.g. collections.margin_review?.data?.length" },
+      /* wwEditor:end */
+    },
+    marginId: { label: { en: "↳ applies to id" }, type: "Text", defaultValue: "margin-review", bindable: true, section: "settings" },
+
     // ---- Active state (bind to your current route / page) ----
     activeId: { label: { en: "Active destination id (bind)" }, type: "Text", defaultValue: "jobs", bindable: true },
     activeChildId: { label: { en: "Active sub-page id (bind)" }, type: "Text", defaultValue: "projects", bindable: true },
