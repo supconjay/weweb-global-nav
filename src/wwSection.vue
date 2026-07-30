@@ -44,10 +44,10 @@
 
     <!-- IT support ticket form -->
     <transition name="pp-fade">
-      <div v-if="supportOpen" class="pp-modal__backdrop" @click="closeSupport"></div>
+      <div v-if="supportOpen" class="pp-modal__backdrop" :class="{ 'pp-invisible': capturing }" @click="closeSupport"></div>
     </transition>
     <transition name="pp-pop">
-      <div v-if="supportOpen" class="pp-modal" role="dialog" aria-label="IT support">
+      <div v-if="supportOpen" class="pp-modal" :class="{ 'pp-invisible': capturing }" role="dialog" aria-label="IT support">
         <div class="pp-modal__head">
           <span class="pp-modal__title">
             <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('lifebuoy')"></path></svg>
@@ -111,10 +111,23 @@
               <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('upload')"></path></svg>
               <span>{{ content.filesHint || 'Drop screenshots or files here, or click to browse' }}</span>
             </div>
+            <button
+              v-if="content.allowScreenshot !== false && screenshotSupported"
+              type="button"
+              class="pp-shot"
+              :disabled="capturing"
+              @click="takeScreenshot"
+            >
+              <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('camera')"></path></svg>
+              <span>{{ capturing ? (content.capturingLabel || 'Choose what to capture...') : (content.screenshotLabel || 'Take a screenshot') }}</span>
+            </button>
             <input ref="supportFile" type="file" multiple class="pp-hidden" @change="onSupportPick" />
             <ul v-if="supportFiles.length" class="pp-files">
               <li v-for="(f, i) in supportFiles" :key="i" class="pp-file">
-                <span class="pp-file__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(f.isImage ? 'image' : 'file')"></path></svg></span>
+                <span class="pp-file__ico">
+                  <img v-if="f.url" :src="f.url" :alt="f.name" />
+                  <svg v-else class="pp-svg" v-bind="svgAttrs"><path :d="ic(f.isImage ? 'image' : 'file')"></path></svg>
+                </span>
                 <span class="pp-file__name">{{ f.name }}</span>
                 <span class="pp-file__size">{{ prettySize(f.size) }}</span>
                 <button type="button" class="pp-file__x" aria-label="Remove" @click.stop="removeSupportFile(i)">
@@ -264,6 +277,7 @@ const ICONS = {
   lifebuoy: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.9 4.9l4.2 4.2M14.9 14.9l4.2 4.2M19.1 4.9l-4.2 4.2M9.1 14.9l-4.2 4.2",
   paperclip: "M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48",
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+  camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
   image: "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21",
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6",
 };
@@ -287,7 +301,16 @@ export default {
       supportFiles: [],
       supportDrag: false,
       supportErr: "",
+      capturing: false,
+      screenshotSupported: false,
     };
+  },
+  mounted() {
+    // Screen Capture API: desktop browsers over HTTPS only (no mobile support),
+    // so the button is hidden unless it's actually available.
+    try {
+      this.screenshotSupported = !!(navigator && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+    } catch (e) { this.screenshotSupported = false; }
   },
   watch: {
     "content.activeId"(v) { if (v != null && v !== "") this.curId = String(v); },
@@ -510,6 +533,60 @@ export default {
         });
       });
     },
+    // Capture a frame of a screen/window/tab the user picks, then attach it as a
+    // PNG. The form is hidden while the picker is open so the shot shows the app
+    // underneath rather than this dialog.
+    takeScreenshot() {
+      if (this.capturing) return;
+      const nav = typeof navigator !== "undefined" ? navigator : null;
+      const doc = typeof document !== "undefined" ? document : null;
+      if (!nav || !nav.mediaDevices || !nav.mediaDevices.getDisplayMedia || !doc) {
+        this.supportErr = this.content.screenshotUnsupported || "Screen capture isn't available in this browser.";
+        return;
+      }
+      this.supportErr = "";
+      this.capturing = true;
+      let stream = null;
+      const cleanup = () => {
+        if (stream) { try { stream.getTracks().forEach((t) => t.stop()); } catch (e) {} }
+        this.capturing = false;
+      };
+      this.$nextTick(() => {
+        nav.mediaDevices.getDisplayMedia({ video: true, audio: false })
+          .then((s) => {
+            stream = s;
+            const video = doc.createElement("video");
+            video.srcObject = stream;
+            video.muted = true;
+            return video.play().then(() => new Promise((resolve) => setTimeout(() => resolve(video), 180)));
+          })
+          .then((video) => {
+            const canvas = doc.createElement("canvas");
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+            return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+          })
+          .then((blob) => {
+            cleanup();
+            if (!blob) return;
+            const name = "screenshot-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + ".png";
+            let file;
+            try { file = new File([blob], name, { type: "image/png" }); }
+            catch (e) { file = blob; file.name = name; }
+            const max = Number(this.content.maxFiles) > 0 ? Math.floor(Number(this.content.maxFiles)) : 10;
+            if (this.supportFiles.length >= max) return;
+            this.supportFiles.push({
+              file, name, size: blob.size, type: "image/png", isImage: true,
+              url: URL.createObjectURL(blob),
+            });
+          })
+          .catch(() => {
+            // User dismissed the picker, or permission denied — just restore.
+            cleanup();
+          });
+      });
+    },
     removeSupportFile(i) {
       const f = this.supportFiles[i];
       if (f && f.url) { try { URL.revokeObjectURL(f.url); } catch (e) {} }
@@ -661,6 +738,13 @@ select.pp-in { appearance: none; cursor: pointer; }
 .pp-drop:hover, .pp-drop--over { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
 .pp-drop .pp-svg { width: 20px; height: 20px; }
 .pp-hidden { display: none; }
+.pp-invisible { opacity: 0 !important; pointer-events: none !important; }
+.pp-shot { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; padding: 10px 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text-muted); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.pp-shot:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.pp-shot:disabled { opacity: .6; cursor: default; }
+.pp-shot .pp-svg { width: 16px; height: 16px; }
+.pp-file__ico img { width: 100%; height: 100%; object-fit: cover; border-radius: 7px; }
+.pp-file__ico { overflow: hidden; }
 .pp-files { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pp-file { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
 .pp-file__ico { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: var(--surface-3); color: var(--text-muted); }

@@ -170,6 +170,12 @@ export default {
     filesLabel: { label: { en: "Attachments label" }, type: "Text", defaultValue: "Attachments", bindable: true },
     filesHint: { label: { en: "Attachments hint" }, type: "Text", defaultValue: "Drop screenshots or files here, or click to browse", bindable: true },
     maxFiles: { label: { en: "Max attachments" }, type: "Number", options: { min: 1, max: 20, step: 1 }, defaultValue: 10, bindable: true },
+    // Screen Capture API — desktop browsers on HTTPS only. The button hides
+    // itself automatically where it isn't supported (e.g. iOS/Android).
+    allowScreenshot: { label: { en: "Allow screenshot capture" }, type: "OnOff", defaultValue: true, bindable: true },
+    screenshotLabel: { label: { en: "Screenshot button label" }, type: "Text", defaultValue: "Take a screenshot", bindable: true },
+    capturingLabel: { label: { en: "Screenshot capturing label" }, type: "Text", defaultValue: "Choose what to capture...", bindable: true },
+    screenshotUnsupported: { label: { en: "Screenshot unsupported message" }, type: "Text", defaultValue: "Screen capture isn't available in this browser.", bindable: true },
     requiredError: { label: { en: "Validation message" }, type: "Text", defaultValue: "Please add a subject and a description.", bindable: true },
     submitLabel: { label: { en: "Submit button label" }, type: "Text", defaultValue: "Submit ticket", bindable: true },
     cancelLabel: { label: { en: "Cancel button label" }, type: "Text", defaultValue: "Cancel", bindable: true },
