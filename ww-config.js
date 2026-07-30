@@ -115,6 +115,15 @@ export default {
     markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark All as Read", bindable: true },
     notifEmptyText: { label: { en: "Empty text" }, type: "Text", defaultValue: "You're all caught up", bindable: true },
 
+    // ---- Role visibility + live badges (bindable, keyed by item id) ----
+    // hiddenIds: bind to a role-based list of ids to hide, e.g.
+    //   isAdmin ? [] : ['admin','reporting']  (accepts an array or "a,b,c").
+    //   Applies to top-level items AND sub-pages.
+    hiddenIds: { label: { en: "Hidden ids (bind, role-based)" }, type: "Array", bindable: true, defaultValue: [] },
+    // badges: bind to an object map { id: count } that overrides each item's
+    //   badge, e.g. { notifications: unreadCount, tasks: openTaskCount }.
+    badges: { label: { en: "Badge counts (bind, { id: count })" }, type: "Object", bindable: true, defaultValue: {} },
+
     // ---- Active state (bind to your current route / page) ----
     activeId: { label: { en: "Active destination id (bind)" }, type: "Text", defaultValue: "jobs", bindable: true },
     activeChildId: { label: { en: "Active sub-page id (bind)" }, type: "Text", defaultValue: "projects", bindable: true },

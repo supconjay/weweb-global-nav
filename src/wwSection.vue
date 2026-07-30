@@ -181,21 +181,38 @@ export default {
     "content.activeChildId"(v) { this.curChild = v != null && v !== "" ? String(v) : null; },
   },
   computed: {
+    // Bindable set of ids to hide (role-based). Applies to items AND sub-pages.
+    hiddenSet() {
+      const raw = this.content.hiddenIds;
+      const arr = Array.isArray(raw) ? raw : (typeof raw === "string" && raw ? raw.split(",").map((s) => s.trim()) : []);
+      const set = {};
+      arr.forEach((v) => { if (v != null && v !== "") set[String(v)] = true; });
+      return set;
+    },
+    // Bindable map { id: count } that overrides each item's own badge.
+    badgesMap() {
+      const b = this.content.badges;
+      return b && typeof b === "object" && !Array.isArray(b) ? b : {};
+    },
+    resolveBadge(id, own) {
+      const o = this.badgesMap[id];
+      return o != null && o !== "" ? o : own;
+    },
     items() {
       const raw = Array.isArray(this.content.items) ? this.content.items : [];
       return raw
-        .filter((i) => i && i.id != null && i.id !== "" && i.hidden !== true)
+        .filter((i) => i && i.id != null && i.id !== "" && i.hidden !== true && !this.hiddenSet[String(i.id)])
         .map((i) => ({
           id: String(i.id),
           label: i.label != null && i.label !== "" ? i.label : String(i.id),
           icon: i.icon || "dot",
           kind: i.kind === "hub" ? "hub" : "portal",
           inBar: i.inBar === true,
-          badge: i.badge,
+          badge: this.resolveBadge(String(i.id), i.badge),
           href: i.href || null,
           popover: i.popover || null,
           children: Array.isArray(i.children)
-            ? i.children.filter((c) => c && c.id != null && c.id !== "").map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge, href: c.href || null }))
+            ? i.children.filter((c) => c && c.id != null && c.id !== "" && !this.hiddenSet[String(c.id)]).map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: this.resolveBadge(String(c.id), c.badge), href: c.href || null }))
             : [],
         }));
     },
@@ -238,8 +255,8 @@ export default {
     contextChildren() {
       const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
       const mine = flat
-        .filter((s) => s && s.id != null && s.id !== "" && s.hidden !== true && String(s.parent) === String(this.curId))
-        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge, href: s.href || null }));
+        .filter((s) => s && s.id != null && s.id !== "" && s.hidden !== true && !this.hiddenSet[String(s.id)] && String(s.parent) === String(this.curId))
+        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: this.resolveBadge(String(s.id), s.badge), href: s.href || null }));
       if (mine.length) return mine;
       return this.activeItem ? this.activeItem.children : [];
     },
