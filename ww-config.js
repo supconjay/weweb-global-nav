@@ -155,6 +155,10 @@ export default {
     showSettings: { label: { en: "Show Settings in More" }, type: "OnOff", defaultValue: true, bindable: true },
     settingsLabel: { label: { en: "Settings label" }, type: "Text", defaultValue: "Settings", bindable: true },
     settingsId: { label: { en: "Settings page id" }, type: "Text", defaultValue: "settings", bindable: true },
+    // Shown inside the Settings button. Falls back to the user's initials, then
+    // to a generic person icon, so it always looks intentional.
+    userAvatar: { label: { en: "User avatar URL (bind)" }, type: "Text", defaultValue: "", bindable: true },
+    userName: { label: { en: "User name (for initials)" }, type: "Text", defaultValue: "", bindable: true },
 
     showSupport: { label: { en: "Show IT support in More" }, type: "OnOff", defaultValue: true, bindable: true },
     supportLabel: { label: { en: "Support button label" }, type: "Text", defaultValue: "IT Support", bindable: true },
@@ -165,8 +169,9 @@ export default {
     priorityLabel: { label: { en: "Priority label" }, type: "Text", defaultValue: "Priority", bindable: true },
     priorities: {
       label: { en: "Priorities (comma-separated)" }, type: "Text", bindable: true,
-      defaultValue: "Low, Normal, High, Urgent",
+      defaultValue: "Low, Medium, High",
     },
+    defaultPriority: { label: { en: "Default priority" }, type: "Text", defaultValue: "Low", bindable: true },
     descLabel: { label: { en: "Description label" }, type: "Text", defaultValue: "Description", bindable: true },
     descPlaceholder: { label: { en: "Description placeholder" }, type: "Text", defaultValue: "What happened? What were you trying to do? Steps to reproduce help a lot.", bindable: true },
     allowAttachments: { label: { en: "Allow attachments" }, type: "OnOff", defaultValue: true, bindable: true },
@@ -181,6 +186,9 @@ export default {
     screenshotUnsupported: { label: { en: "Screenshot unsupported message" }, type: "Text", defaultValue: "Screen capture isn't available in this browser.", bindable: true },
     requiredError: { label: { en: "Validation message" }, type: "Text", defaultValue: "Please add a subject and a description.", bindable: true },
     submitLabel: { label: { en: "Submit button label" }, type: "Text", defaultValue: "Submit ticket", bindable: true },
+    successTitle: { label: { en: "Success title" }, type: "Text", defaultValue: "Ticket submitted", bindable: true },
+    successText: { label: { en: "Success message" }, type: "Text", defaultValue: "Our IT team has your request. You can track updates in the Help Desk.", bindable: true },
+    doneLabel: { label: { en: "Success done label" }, type: "Text", defaultValue: "Done", bindable: true },
     cancelLabel: { label: { en: "Cancel button label" }, type: "Text", defaultValue: "Cancel", bindable: true },
 
     // ---- Active state (bind to your current route / page) ----

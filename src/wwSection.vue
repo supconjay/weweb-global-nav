@@ -47,7 +47,12 @@
               :aria-label="content.settingsLabel || 'Settings'"
               @click="openSettings"
             >
-              <span class="pp-settingsbtn__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('cog')"></path></svg></span>
+              <span class="pp-avatar">
+                <img v-if="userAvatar" :src="userAvatar" :alt="userName || 'Account'" />
+                <span v-else-if="userInitials" class="pp-avatar__ini">{{ userInitials }}</span>
+                <svg v-else class="pp-svg" v-bind="svgAttrs"><path :d="ic('user')"></path></svg>
+                <span class="pp-avatar__cog"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('cog')"></path></svg></span>
+              </span>
               <span class="pp-settingsbtn__txt">{{ content.settingsLabel || 'Settings' }}</span>
             </button>
           </div>
@@ -71,7 +76,15 @@
           </button>
         </div>
 
-        <div class="pp-modal__body">
+        <!-- Submitted confirmation -->
+        <div v-if="supportSent" class="pp-sent">
+          <span class="pp-sent__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('check-circle')"></path></svg></span>
+          <strong class="pp-sent__title">{{ content.successTitle || 'Ticket submitted' }}</strong>
+          <p class="pp-sent__text">{{ content.successText || 'Our IT team has your request. You can track updates in the Help Desk.' }}</p>
+          <button type="button" class="pp-mbtn pp-mbtn--primary" @click="closeSupport">{{ content.doneLabel || 'Done' }}</button>
+        </div>
+
+        <div v-else class="pp-modal__body">
           <label class="pp-fld">
             <span class="pp-fld__label">{{ content.subjectLabel || 'Subject' }} <em>*</em></span>
             <input
@@ -84,12 +97,21 @@
             />
           </label>
 
-          <label v-if="priorityOptions.length" class="pp-fld">
+          <div v-if="priorityOptions.length" class="pp-fld">
             <span class="pp-fld__label">{{ content.priorityLabel || 'Priority' }}</span>
-            <select v-model="supportPriority" class="pp-in">
-              <option v-for="p in priorityOptions" :key="p" :value="p">{{ p }}</option>
-            </select>
-          </label>
+            <div class="pp-seg">
+              <button
+                v-for="p in priorityOptions"
+                :key="p"
+                type="button"
+                class="pp-seg__btn"
+                :class="[{ 'pp-seg__btn--on': supportPriority === p }, 'pp-seg__btn--' + priorityTone(p)]"
+                @click="supportPriority = p"
+              >
+                <span class="pp-seg__dot"></span>{{ p }}
+              </button>
+            </div>
+          </div>
 
           <label class="pp-fld">
             <span class="pp-fld__label">{{ content.descLabel || 'Description' }} <em>*</em></span>
@@ -145,7 +167,7 @@
           <p v-if="supportErr" class="pp-err">{{ supportErr }}</p>
         </div>
 
-        <div class="pp-modal__foot">
+        <div v-if="!supportSent" class="pp-modal__foot">
           <button type="button" class="pp-mbtn" @click="closeSupport">{{ content.cancelLabel || 'Cancel' }}</button>
           <button type="button" class="pp-mbtn pp-mbtn--primary" @click="submitSupport">{{ content.submitLabel || 'Submit ticket' }}</button>
         </div>
@@ -301,6 +323,8 @@ const ICONS = {
   paperclip: "M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48",
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
   camera: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  "check-circle": "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM8.5 12l2.5 2.5L16 9",
+  user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
   cog: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
   image: "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21",
   file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6",
@@ -327,6 +351,7 @@ export default {
       supportErr: "",
       capturing: false,
       screenshotSupported: false,
+      supportSent: false,
     };
   },
   mounted() {
@@ -347,6 +372,7 @@ export default {
   },
   beforeUnmount() {
     try { if (this._onDocDown) document.removeEventListener("pointerdown", this._onDocDown, true); } catch (e) {}
+    if (this._sentTimer) { clearTimeout(this._sentTimer); this._sentTimer = null; }
   },
   watch: {
     // Landing on a different destination reveals its sub-pages again.
@@ -398,7 +424,20 @@ export default {
     },
     moreActive() { return this.moreList.some((i) => i.id === this.effectiveId); },
     moreBadgeTotal() { return this.moreList.reduce((s, i) => s + (this.badgeNum(i) || 0), 0); },
-    priorityOptions() { return this.csv(this.content.priorities, ["Low", "Normal", "High", "Urgent"]); },
+    userAvatar() { return this.str(this.content.userAvatar).trim(); },
+    userName() { return this.str(this.content.userName).trim(); },
+    userInitials() {
+      const n = this.userName;
+      if (!n) return "";
+      return n.split(/\s+/).filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+    },
+    priorityOptions() { return this.csv(this.content.priorities, ["Low", "Medium", "High"]); },
+    // Configured default, matched case-insensitively; falls back to the first option.
+    defaultPriority() {
+      const want = this.str(this.content.defaultPriority).trim().toLowerCase();
+      const hit = want ? this.priorityOptions.find((p) => String(p).toLowerCase() === want) : null;
+      return hit || this.priorityOptions[0] || "";
+    },
     notifItems() {
       const raw = this.content.notifications;
       if (Array.isArray(raw)) return raw;
@@ -561,15 +600,29 @@ export default {
       this.sheetOpen = false;
       this.notifOpen = false;
       this.supportErr = "";
-      if (!this.supportPriority) this.supportPriority = this.priorityOptions[1] || this.priorityOptions[0] || "";
+      this.supportSent = false;
+      if (!this.supportPriority) this.supportPriority = this.defaultPriority;
       this.supportOpen = true;
       this.$nextTick(() => { const el = this.$refs.supportSubject; if (el && el.focus) el.focus(); });
     },
-    closeSupport() { this.supportOpen = false; this.supportDrag = false; },
+    priorityTone(p) {
+      const s = String(p || "").toLowerCase();
+      if (/urgent|critical|high|p1/.test(s)) return "high";
+      if (/med|normal|standard|p2/.test(s)) return "med";
+      return "low";
+    },
+    closeSupport() {
+      if (this._sentTimer) { clearTimeout(this._sentTimer); this._sentTimer = null; }
+      this.supportOpen = false;
+      this.supportDrag = false;
+      if (this.supportSent) this.resetSupport();
+      this.supportSent = false;
+    },
     resetSupport() {
       this.supportSubject = "";
       this.supportDesc = "";
       this.supportErr = "";
+      this.supportPriority = this.defaultPriority;
       this.supportFiles.forEach((f) => { if (f.url) { try { URL.revokeObjectURL(f.url); } catch (e) {} } });
       this.supportFiles = [];
       this.supportDrag = false;
@@ -685,8 +738,10 @@ export default {
           attachments: this.supportFiles.map((f) => ({ name: f.name, size: f.size, type: f.type })),
         },
       });
-      this.supportOpen = false;
-      this.resetSupport();
+      // Confirm in place, then auto-dismiss (Done closes it immediately).
+      this.supportSent = true;
+      if (this._sentTimer) clearTimeout(this._sentTimer);
+      this._sentTimer = setTimeout(() => { this._sentTimer = null; this.closeSupport(); }, 3200);
     },
     emitViewAll() { this.notifOpen = false; this.$emit("trigger-event", { name: "viewAllNotifications", event: {} }); },
     emitMarkAll() { this.$emit("trigger-event", { name: "markAllRead", event: {} }); },
@@ -772,9 +827,13 @@ export default {
 .pp-sheet__foot { display: flex; align-items: stretch; gap: 8px; margin-top: 2px; }
 .pp-settingsbtn { flex: none; width: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font-family: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
 .pp-settingsbtn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, transparent); }
-.pp-settingsbtn__ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--surface-3); color: var(--text-muted); }
-.pp-settingsbtn:hover .pp-settingsbtn__ico { color: var(--primary); }
-.pp-settingsbtn__ico .pp-svg { width: 20px; height: 20px; }
+.pp-avatar { position: relative; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; overflow: visible; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.pp-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.pp-avatar__ini { font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.pp-avatar > .pp-svg { width: 19px; height: 19px; }
+.pp-avatar__cog { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); }
+.pp-settingsbtn:hover .pp-avatar__cog { color: var(--primary); border-color: var(--primary); }
+.pp-avatar__cog .pp-svg { width: 10px; height: 10px; }
 .pp-settingsbtn__txt { font-size: 12px; font-weight: 600; }
 .pp-supportbtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font-family: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
 .pp-supportbtn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, transparent); }
@@ -810,6 +869,26 @@ export default {
 .pp-in--ta { resize: vertical; min-height: 104px; line-height: 1.5; }
 .pp-in--err { border-color: var(--danger); }
 select.pp-in { appearance: none; cursor: pointer; }
+
+/* Priority segmented control */
+.pp-seg { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.pp-seg__btn { flex: 1 1 0; min-width: 84px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 12px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: var(--text-muted); font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background .18s ease, color .18s ease, border-color .18s ease, transform .12s ease; }
+.pp-seg__btn:hover { color: var(--text); background: var(--surface-3); }
+.pp-seg__btn:active { transform: scale(.97); }
+.pp-seg__dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .45; transition: opacity .18s ease, transform .18s ease; }
+.pp-seg__btn--on .pp-seg__dot { opacity: 1; transform: scale(1.15); }
+.pp-seg__btn--on { background: var(--surface); border-color: var(--border); box-shadow: 0 1px 2px rgba(16,24,40,.06); }
+.pp-seg__btn--low.pp-seg__btn--on { color: var(--ok, #10b981); border-color: color-mix(in srgb, var(--ok, #10b981) 40%, transparent); background: color-mix(in srgb, var(--ok, #10b981) 10%, var(--surface)); }
+.pp-seg__btn--med.pp-seg__btn--on { color: #b7791f; border-color: color-mix(in srgb, #f59e0b 45%, transparent); background: color-mix(in srgb, #f59e0b 14%, var(--surface)); }
+.pp-seg__btn--high.pp-seg__btn--on { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
+
+/* Submitted confirmation */
+.pp-sent { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 34px 24px 30px; }
+.pp-sent__ico { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: color-mix(in srgb, var(--ok, #10b981) 14%, transparent); color: var(--ok, #10b981); animation: pp-pop-in .28s cubic-bezier(.22,1.2,.36,1); }
+.pp-sent__ico .pp-svg { width: 30px; height: 30px; }
+.pp-sent__title { font-size: 16px; font-weight: 700; color: var(--text); }
+.pp-sent__text { margin: 0 0 6px; font-size: 13.5px; color: var(--text-muted); max-width: 320px; line-height: 1.5; }
+@keyframes pp-pop-in { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .pp-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 20px 14px; border: 1.5px dashed var(--border-strong); border-radius: 12px; background: var(--surface-2); color: var(--text-muted); font-size: 13px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
 .pp-drop:hover, .pp-drop--over { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
