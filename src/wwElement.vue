@@ -1,0 +1,296 @@
+<template>
+  <div class="pp-root" :class="[themeClass, { 'pp-root--fixed': content.fixed !== false }]" :style="rootStyle">
+    <!-- Backdrop + More sheet -->
+    <transition name="pp-fade">
+      <div v-if="sheetOpen" class="pp-sheet__backdrop" @click="closeSheet"></div>
+    </transition>
+    <transition name="pp-slide">
+      <div v-if="sheetOpen" class="pp-sheet" role="dialog" aria-label="Navigation menu">
+        <div class="pp-sheet__handle"></div>
+        <div class="pp-sheet__scroll">
+          <template v-for="grp in sheetGroups" :key="grp.key">
+            <div v-if="grp.items.length" class="pp-sheet__group">
+              <div class="pp-sheet__grouplabel">{{ grp.label }}</div>
+              <div class="pp-sheet__grid">
+                <button
+                  v-for="it in grp.items"
+                  :key="it.id"
+                  type="button"
+                  class="pp-sheet__item"
+                  :class="{ 'pp-sheet__item--active': it.id === curId }"
+                  @click="select(it)"
+                >
+                  <span class="pp-sheet__ico">
+                    <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(it.icon)"></path></svg>
+                    <span v-if="badgeNum(it) > 0" class="pp-badge">{{ badgeText(it) }}</span>
+                  </span>
+                  <span class="pp-sheet__label">{{ it.label }}</span>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </transition>
+
+    <div class="pp-bar__wrap">
+      <!-- Contextual sub-nav strip -->
+      <div v-if="content.showContextual !== false && contextChildren.length" class="pp-context">
+        <div class="pp-context__scroll">
+          <button
+            v-for="ch in contextChildren"
+            :key="ch.id"
+            type="button"
+            class="pp-tab"
+            :class="{ 'pp-tab--active': ch.id === curChild }"
+            @click="selectChild(ch)"
+          >
+            <svg v-if="ch.icon" class="pp-svg pp-tab__ico" v-bind="svgAttrs"><path :d="ic(ch.icon)"></path></svg>
+            <span>{{ ch.label }}</span>
+            <span v-if="badgeNum(ch) > 0" class="pp-badge pp-badge--inline">{{ badgeText(ch) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Primary bottom bar -->
+      <nav class="pp-bar" :aria-label="content.ariaLabel || 'Primary'">
+        <button
+          v-for="it in barItems"
+          :key="it.id"
+          type="button"
+          class="pp-item"
+          :class="{ 'pp-item--active': it.id === curId }"
+          @click="select(it)"
+        >
+          <span class="pp-item__ico">
+            <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(it.icon)"></path></svg>
+            <span v-if="badgeNum(it) > 0" class="pp-badge">{{ badgeText(it) }}</span>
+          </span>
+          <span v-if="content.showLabels !== false" class="pp-item__label">{{ it.label }}</span>
+        </button>
+
+        <button
+          v-if="hasMore"
+          type="button"
+          class="pp-item pp-item--more"
+          :class="{ 'pp-item--active': sheetOpen || moreActive }"
+          @click="toggleSheet"
+        >
+          <span class="pp-item__ico">
+            <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(sheetOpen ? 'x' : 'grid')"></path></svg>
+            <span v-if="!sheetOpen && moreBadgeTotal > 0" class="pp-badge">{{ moreBadgeTotal > 99 ? '99+' : moreBadgeTotal }}</span>
+          </span>
+          <span v-if="content.showLabels !== false" class="pp-item__label">{{ content.moreLabel || 'More' }}</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+</template>
+
+<script>
+const ICONS = {
+  home: "M3 10.5L12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5",
+  bell: "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+  "check-square": "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+  calendar: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+  book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z",
+  briefcase: "M6 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2M4 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zM2 12h20",
+  users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
+  truck: "M1 3h15v13H1zM16 8h4l3 3v5h-7M5.5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18.5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+  chart: "M3 3v18h18M7 15l4-4 3 3 5-6",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+  folder: "M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z",
+  wrench: "M14.7 6.3a4 4 0 0 0-5.4 5.3L3 18l3 3 6.4-6.3a4 4 0 0 0 5.3-5.4l-2.6 2.6-2.3-2.3 2.6-2.6z",
+  map: "M9 3L3 6v15l6-3 6 3 6-3V3l-6 3-6-3zM9 3v15M15 6v15",
+  dollar: "M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  clipboard: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 2h6a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z",
+  layers: "M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5",
+  compass: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.2 7.8l-2.9 6.4-6.4 2.9 2.9-6.4 6.4-2.9z",
+  send: "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
+  target: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+  x: "M18 6L6 18M6 6l12 12",
+  dot: "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0",
+};
+
+export default {
+  props: { content: { type: Object, required: true }, uid: { type: String, required: false } },
+  emits: ["trigger-event"],
+  data() {
+    return {
+      curId: this.initId(),
+      curChild: this.content.activeChildId != null ? String(this.content.activeChildId) : null,
+      sheetOpen: false,
+    };
+  },
+  watch: {
+    "content.activeId"(v) { if (v != null && v !== "") this.curId = String(v); },
+    "content.activeChildId"(v) { this.curChild = v != null && v !== "" ? String(v) : null; },
+  },
+  computed: {
+    items() {
+      const raw = Array.isArray(this.content.items) ? this.content.items : [];
+      return raw
+        .filter((i) => i && i.id != null && i.id !== "" && i.hidden !== true)
+        .map((i) => ({
+          id: String(i.id),
+          label: i.label != null && i.label !== "" ? i.label : String(i.id),
+          icon: i.icon || "dot",
+          kind: i.kind === "hub" ? "hub" : "portal",
+          inBar: i.inBar === true,
+          badge: i.badge,
+          children: Array.isArray(i.children)
+            ? i.children.filter((c) => c && c.id != null && c.id !== "").map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge }))
+            : [],
+        }));
+    },
+    maxBar() { const n = Number(this.content.maxBarItems); return n >= 2 ? Math.floor(n) : 5; },
+    barPrimary() { return this.items.filter((i) => i.inBar); },
+    hasMore() { return this.moreList.length > 0; },
+    barItems() {
+      const prim = this.barPrimary;
+      if (prim.length > this.maxBar) return prim.slice(0, this.maxBar - 1);
+      // reserve a slot for More if there are non-bar items
+      const overflow = this.items.some((i) => !i.inBar);
+      return overflow ? prim.slice(0, this.maxBar - 1) : prim.slice(0, this.maxBar);
+    },
+    moreList() {
+      const shown = {};
+      this.barItems.forEach((i) => { shown[i.id] = true; });
+      return this.items.filter((i) => !shown[i.id]);
+    },
+    sheetGroups() {
+      const hubs = this.moreList.filter((i) => i.kind === "hub");
+      const portals = this.moreList.filter((i) => i.kind === "portal");
+      return [
+        { key: "hub", label: this.content.hubsLabel || "Quick access", items: hubs },
+        { key: "portal", label: this.content.portalsLabel || "Portals", items: portals },
+      ];
+    },
+    moreActive() { return this.moreList.some((i) => i.id === this.curId); },
+    moreBadgeTotal() { return this.moreList.reduce((s, i) => s + (this.badgeNum(i) || 0), 0); },
+    activeItem() { return this.items.find((i) => i.id === this.curId) || null; },
+    contextChildren() { return this.activeItem ? this.activeItem.children : []; },
+    svgAttrs() {
+      return { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" };
+    },
+    themeClass() {
+      const m = this.content.darkMode || "auto";
+      return { "pp-auto": m === "auto", "pp-dark": m === "dark", "pp-light": m === "light" };
+    },
+    rootStyle() {
+      return {
+        "--pp-primary": this.content.primaryColor || "#10b981",
+        "--pp-accent": this.content.accentColor || "#6366f1",
+        "--pp-max": (this.content.maxWidth != null && this.content.maxWidth !== "" ? this.content.maxWidth : 720) + "px",
+      };
+    },
+  },
+  methods: {
+    ic(name) { return ICONS[name] || ICONS.dot; },
+    initId() {
+      if (this.content && this.content.activeId != null && this.content.activeId !== "") return String(this.content.activeId);
+      const first = (Array.isArray(this.content && this.content.items) ? this.content.items : []).find((i) => i && i.id != null && i.id !== "");
+      return first ? String(first.id) : "";
+    },
+    badgeNum(it) {
+      const b = it && it.badge;
+      if (b == null || b === "" || b === false) return 0;
+      const n = Number(b);
+      return isFinite(n) ? n : (b ? 1 : 0);
+    },
+    badgeText(it) { const n = this.badgeNum(it); return n > 99 ? "99+" : String(n); },
+    select(it) {
+      if (!it) return;
+      this.curId = it.id;
+      this.curChild = null;
+      this.sheetOpen = false;
+      this.$emit("trigger-event", { name: "navigate", event: { id: it.id, kind: it.kind, label: it.label, item: it } });
+    },
+    selectChild(ch) {
+      if (!ch) return;
+      this.curChild = ch.id;
+      this.$emit("trigger-event", { name: "navigateChild", event: { parentId: this.curId, id: ch.id, label: ch.label, child: ch } });
+    },
+    toggleSheet() { this.sheetOpen = !this.sheetOpen; },
+    closeSheet() { this.sheetOpen = false; },
+  },
+};
+</script>
+
+<style lang="scss" scoped>
+.pp-root {
+  --surface: #ffffff; --surface-2: #f7f9fc; --surface-3: #eef2f7; --border: #e4e9f0; --border-strong: #d4dbe6;
+  --text: #1f2a37; --text-muted: #64748b; --text-subtle: #94a3b8;
+  --shadow-up: 0 -2px 4px rgba(16, 24, 40, 0.04), 0 -10px 30px rgba(16, 24, 40, 0.08);
+  --danger: #ef4444; --accent: var(--pp-accent, #6366f1); --primary: var(--pp-primary, #10b981);
+  box-sizing: border-box; width: 100%; color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; font-size: 14px;
+}
+.pp-root *, .pp-root *::before, .pp-root *::after { box-sizing: border-box; }
+@mixin dark {
+  --surface: #161f30; --surface-2: #1b2638; --surface-3: #202c40; --border: #28344a; --border-strong: #34425c;
+  --text: #e8eef7; --text-muted: #94a3b8; --text-subtle: #64748b;
+  --shadow-up: 0 -2px 4px rgba(0,0,0,.3), 0 -12px 30px rgba(0,0,0,.4);
+}
+.pp-root.pp-dark { @include dark; }
+@media (prefers-color-scheme: dark) { .pp-root.pp-auto { @include dark; } }
+
+.pp-root--fixed { position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; }
+
+.pp-bar__wrap { max-width: var(--pp-max); margin: 0 auto; }
+
+/* Contextual sub-nav strip */
+.pp-context { background: var(--surface-2); border-top: 1px solid var(--border); }
+.pp-context__scroll { display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto; scrollbar-width: none; }
+.pp-context__scroll::-webkit-scrollbar { display: none; }
+.pp-tab { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s, border-color .15s; }
+.pp-tab:hover { color: var(--text); border-color: var(--border-strong); }
+.pp-tab__ico { width: 15px; height: 15px; }
+.pp-tab--active { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); border-color: transparent; }
+
+/* Primary bottom bar */
+.pp-bar { display: flex; align-items: stretch; justify-content: space-around; gap: 2px; background: var(--surface); border-top: 1px solid var(--border); box-shadow: var(--shadow-up); padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)); }
+.pp-item { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 4px; border: none; background: transparent; color: var(--text-muted); font-family: inherit; cursor: pointer; border-radius: 12px; transition: color .15s, background .15s; }
+.pp-item:hover { color: var(--text); background: var(--surface-2); }
+.pp-item__ico { position: relative; display: grid; place-items: center; width: 26px; height: 26px; }
+.pp-item__ico .pp-svg { width: 23px; height: 23px; }
+.pp-item__label { font-size: 11px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-item--active { color: var(--primary); }
+.pp-item--active .pp-item__ico::after { content: ""; position: absolute; inset: -5px -8px; border-radius: 10px; background: color-mix(in srgb, var(--primary) 14%, transparent); z-index: -1; }
+
+.pp-badge { position: absolute; top: -5px; right: -7px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; line-height: 1; border: 2px solid var(--surface); }
+.pp-badge--inline { position: static; border: none; margin-left: 2px; }
+
+/* More sheet */
+.pp-sheet__backdrop { position: fixed; inset: 0; background: rgba(16,24,40,.42); z-index: 950; }
+.pp-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 951; background: var(--surface); border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: var(--shadow-up); padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px)); max-height: 78vh; overflow: hidden; }
+.pp-sheet__handle { width: 40px; height: 4px; border-radius: 999px; background: var(--border-strong); margin: 4px auto 12px; }
+.pp-sheet__scroll { overflow-y: auto; max-height: calc(78vh - 40px); }
+.pp-sheet__group { margin-bottom: 14px; }
+.pp-sheet__grouplabel { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-subtle); margin: 4px 4px 10px; }
+.pp-sheet__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.pp-sheet__item { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-family: inherit; cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+.pp-sheet__item:hover { border-color: var(--border-strong); }
+.pp-sheet__item:active { transform: scale(.97); }
+.pp-sheet__item--active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.pp-sheet__ico { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--surface-3); color: var(--text-muted); }
+.pp-sheet__item--active .pp-sheet__ico { background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary); }
+.pp-sheet__ico .pp-svg { width: 22px; height: 22px; }
+.pp-sheet__label { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.25; }
+
+.pp-svg { display: block; }
+
+.pp-fade-enter-active, .pp-fade-leave-active { transition: opacity .2s; }
+.pp-fade-enter-from, .pp-fade-leave-to { opacity: 0; }
+.pp-slide-enter-active, .pp-slide-leave-active { transition: transform .24s cubic-bezier(.22,.61,.36,1); }
+.pp-slide-enter-from, .pp-slide-leave-to { transform: translateY(100%); }
+
+/* Desktop: roomier bar, labels beside icons optional */
+@media (min-width: 900px) {
+  .pp-bar { padding-top: 8px; padding-bottom: 8px; }
+  .pp-item__ico .pp-svg { width: 22px; height: 22px; }
+  .pp-item__label { font-size: 12px; }
+}
+</style>
