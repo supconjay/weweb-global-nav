@@ -19,7 +19,7 @@
                   :href="it.href || undefined"
                   :type="it.href ? undefined : 'button'"
                   class="pp-sheet__item"
-                  :class="{ 'pp-sheet__item--active': it.id === curId }"
+                  :class="{ 'pp-sheet__item--active': it.id === effectiveId }"
                   @click="onSelect(it, $event)"
                 >
                   <span class="pp-sheet__ico">
@@ -71,20 +71,12 @@
             />
           </label>
 
-          <div class="pp-fld__row">
-            <label v-if="categoryOptions.length" class="pp-fld">
-              <span class="pp-fld__label">{{ content.categoryLabel || 'Category' }}</span>
-              <select v-model="supportCategory" class="pp-in">
-                <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
-              </select>
-            </label>
-            <label v-if="priorityOptions.length" class="pp-fld">
-              <span class="pp-fld__label">{{ content.priorityLabel || 'Priority' }}</span>
-              <select v-model="supportPriority" class="pp-in">
-                <option v-for="p in priorityOptions" :key="p" :value="p">{{ p }}</option>
-              </select>
-            </label>
-          </div>
+          <label v-if="priorityOptions.length" class="pp-fld">
+            <span class="pp-fld__label">{{ content.priorityLabel || 'Priority' }}</span>
+            <select v-model="supportPriority" class="pp-in">
+              <option v-for="p in priorityOptions" :key="p" :value="p">{{ p }}</option>
+            </select>
+          </label>
 
           <label class="pp-fld">
             <span class="pp-fld__label">{{ content.descLabel || 'Description' }} <em>*</em></span>
@@ -240,7 +232,7 @@
           :href="it.href || undefined"
           :type="it.href ? undefined : 'button'"
           class="pp-item"
-          :class="{ 'pp-item--active': it.id === curId }"
+          :class="{ 'pp-item--active': it.id === effectiveId }"
           @click="onSelect(it, $event)"
         >
           <span class="pp-item__ico">
@@ -314,7 +306,6 @@ export default {
       // ---- IT support ticket ----
       supportOpen: false,
       supportSubject: "",
-      supportCategory: "",
       supportPriority: "",
       supportDesc: "",
       supportFiles: [],
@@ -345,7 +336,7 @@ export default {
   },
   watch: {
     // Landing on a different destination reveals its sub-pages again.
-    curId() { this.stripOpen = true; },
+    effectiveId() { this.stripOpen = true; },
     "content.activeId"(v) { if (v != null && v !== "") this.curId = String(v); },
     "content.activeChildId"(v) { this.curChild = v != null && v !== "" ? String(v) : null; },
   },
@@ -391,9 +382,8 @@ export default {
         { key: "portal", label: this.content.portalsLabel || "Portals", items: portals },
       ];
     },
-    moreActive() { return this.moreList.some((i) => i.id === this.curId); },
+    moreActive() { return this.moreList.some((i) => i.id === this.effectiveId); },
     moreBadgeTotal() { return this.moreList.reduce((s, i) => s + (this.badgeNum(i) || 0), 0); },
-    categoryOptions() { return this.csv(this.content.categories, ["Hardware", "Software / App", "Access / Login", "Network", "Other"]); },
     priorityOptions() { return this.csv(this.content.priorities, ["Low", "Normal", "High", "Urgent"]); },
     notifItems() {
       const raw = this.content.notifications;
@@ -402,15 +392,31 @@ export default {
       return [];
     },
     unreadCount() { return this.notifItems.filter((n) => !this.isRead(n)).length; },
+    // The parent of the active sub-page, looked up in `subPages`. This lets you
+    // bind ONLY activeChildId (e.g. to the current page id) and still get the
+    // right destination highlighted + the right sub-nav shown.
+    derivedParentId() {
+      if (!this.curChild) return null;
+      const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
+      const row = flat.find((s) => s && s.id != null && String(s.id) === String(this.curChild));
+      return row && row.parent != null && row.parent !== "" ? String(row.parent) : null;
+    },
+    // Priority: an explicitly bound activeId, else the derived parent, else the
+    // last clicked destination (optimistic).
+    effectiveId() {
+      const bound = this.content.activeId;
+      if (bound != null && bound !== "") return String(bound);
+      return this.derivedParentId || this.curId;
+    },
     stripAvailable() { return this.content.showContextual !== false && this.contextChildren.length > 0; },
-    activeItem() { return this.items.find((i) => i.id === this.curId) || null; },
+    activeItem() { return this.items.find((i) => i.id === this.effectiveId) || null; },
     // Sub-pages come from a flat top-level `subPages` array (each row carries a
     // `parent` id) — this keeps the WeWeb config one level deep. Falls back to a
     // nested `children` array on the item if you prefer that shape.
     contextChildren() {
       const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
       const mine = flat
-        .filter((s) => s && s.id != null && s.id !== "" && !this.truthy(s.hidden) && String(s.parent) === String(this.curId))
+        .filter((s) => s && s.id != null && s.id !== "" && !this.truthy(s.hidden) && String(s.parent) === String(this.effectiveId))
         .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge, href: s.href || null }));
       if (mine.length) return mine;
       return this.activeItem ? this.activeItem.children : [];
@@ -477,7 +483,7 @@ export default {
     selectChild(ch) {
       if (!ch) return;
       this.curChild = ch.id;
-      this.$emit("trigger-event", { name: "navigateChild", event: { parentId: this.curId, id: ch.id, label: ch.label, child: ch } });
+      this.$emit("trigger-event", { name: "navigateChild", event: { parentId: this.effectiveId, id: ch.id, label: ch.label, child: ch } });
     },
     toggleSheet() { this.sheetOpen = !this.sheetOpen; this.notifOpen = false; },
     closeSheet() { this.sheetOpen = false; },
@@ -532,7 +538,6 @@ export default {
       this.sheetOpen = false;
       this.notifOpen = false;
       this.supportErr = "";
-      if (!this.supportCategory) this.supportCategory = this.categoryOptions[0] || "";
       if (!this.supportPriority) this.supportPriority = this.priorityOptions[1] || this.priorityOptions[0] || "";
       this.supportOpen = true;
       this.$nextTick(() => { const el = this.$refs.supportSubject; if (el && el.focus) el.focus(); });
@@ -648,11 +653,10 @@ export default {
         event: {
           subject,
           description,
-          category: this.supportCategory || "",
           priority: this.supportPriority || "",
           // Context that saves IT a round-trip
           pageUrl,
-          activeId: this.curId || "",
+          activeId: this.effectiveId || "",
           activeChildId: this.curChild || "",
           files: this.supportFiles.map((f) => f.file),
           attachments: this.supportFiles.map((f) => ({ name: f.name, size: f.size, type: f.type })),

@@ -8,7 +8,7 @@ export default {
     { name: "markAllRead", label: { en: "On 'Mark All as Read' click" }, event: {} },
     {
       name: "supportSubmit", label: { en: "On IT support ticket submitted" },
-      event: { subject: "", description: "", category: "", priority: "", pageUrl: "", activeId: "", activeChildId: "", files: [], attachments: [] },
+      event: { subject: "", description: "", priority: "", pageUrl: "", activeId: "", activeChildId: "", files: [], attachments: [] },
     },
   ],
   properties: {
@@ -69,6 +69,7 @@ export default {
         { id: "margin-review", label: "Margin Review", icon: "dollar", kind: "hub", inBar: false },
         { id: "vendor-calendar", label: "Vendor Calendar", icon: "calendar", kind: "hub", inBar: false },
         { id: "price-guide", label: "Price Guide", icon: "book", kind: "hub", inBar: false },
+        { id: "help-desk", label: "Help Desk", icon: "lifebuoy", kind: "hub", inBar: false },
         { id: "reporting", label: "Reporting", icon: "chart", kind: "portal", inBar: false },
         { id: "admin", label: "Admin", icon: "shield", kind: "portal", inBar: false },
       ],
@@ -154,11 +155,6 @@ export default {
     supportTitle: { label: { en: "Form title" }, type: "Text", defaultValue: "IT Support", bindable: true },
     subjectLabel: { label: { en: "Subject label" }, type: "Text", defaultValue: "Subject", bindable: true },
     subjectPlaceholder: { label: { en: "Subject placeholder" }, type: "Text", defaultValue: "Short summary of the issue", bindable: true },
-    categoryLabel: { label: { en: "Category label" }, type: "Text", defaultValue: "Category", bindable: true },
-    categories: {
-      label: { en: "Categories (comma-separated)" }, type: "Text", bindable: true,
-      defaultValue: "Hardware, Software / App, Access / Login, Network, Other",
-    },
     priorityLabel: { label: { en: "Priority label" }, type: "Text", defaultValue: "Priority", bindable: true },
     priorities: {
       label: { en: "Priorities (comma-separated)" }, type: "Text", bindable: true,
@@ -181,7 +177,11 @@ export default {
     cancelLabel: { label: { en: "Cancel button label" }, type: "Text", defaultValue: "Cancel", bindable: true },
 
     // ---- Active state (bind to your current route / page) ----
-    activeId: { label: { en: "Active destination id (bind)" }, type: "Text", defaultValue: "jobs", bindable: true },
+    // Optional: leave EMPTY and the active destination is derived from
+    // activeChildId via each sub-page's `parent`, so binding activeChildId to the
+    // current page id is usually all you need. Set this only for destinations
+    // that have no sub-pages of their own.
+    activeId: { label: { en: "Active destination id (bind, optional)" }, type: "Text", defaultValue: "", bindable: true },
     activeChildId: { label: { en: "Active sub-page id (bind)" }, type: "Text", defaultValue: "projects", bindable: true },
 
     // ---- Behavior / layout ----
