@@ -6,6 +6,10 @@ export default {
     { name: "notificationClick", label: { en: "On notification click" }, event: { id: "", index: 0, notification: {} } },
     { name: "viewAllNotifications", label: { en: "On 'View All' click" }, event: {} },
     { name: "markAllRead", label: { en: "On 'Mark All as Read' click" }, event: {} },
+    {
+      name: "supportSubmit", label: { en: "On IT support ticket submitted" },
+      event: { subject: "", description: "", category: "", priority: "", pageUrl: "", activeId: "", activeChildId: "", files: [], attachments: [] },
+    },
   ],
   properties: {
     // ---- Navigation model ----
@@ -141,33 +145,34 @@ export default {
     markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark All as Read", bindable: true },
     notifEmptyText: { label: { en: "Empty text" }, type: "Text", defaultValue: "You're all caught up", bindable: true },
 
-    // ---- Live badge counts (bindable) ----
-    // Bind each count to a collection length, e.g.
-    //   collections.user_notifications?.data?.length
-    // The count is applied to the destination (or sub-page) whose id matches the
-    // matching "... id" field below, and overrides that row's own badge value.
-    // Leave a count empty to fall back to the row's static badge.
-    notificationsBadge: {
-      label: { en: "Notifications count (bind)" }, type: "Number", bindable: true, defaultValue: null,
-      /* wwEditor:start */
-      bindingValidation: { type: "number", tooltip: "Unread notifications, e.g. collections.user_notifications?.data?.length" },
-      /* wwEditor:end */
+    // ---- IT support ticket (button at the bottom of the More sheet) ----
+    // Submitting fires `supportSubmit` with the form values plus the raw File
+    // objects (event.files) — feed those to your upload/create-ticket workflow.
+    showSupport: { label: { en: "Show IT support in More" }, type: "OnOff", defaultValue: true, bindable: true },
+    supportLabel: { label: { en: "Support button label" }, type: "Text", defaultValue: "IT Support", bindable: true },
+    supportSubLabel: { label: { en: "Support button subtext" }, type: "Text", defaultValue: "Report a problem or request help", bindable: true },
+    supportTitle: { label: { en: "Form title" }, type: "Text", defaultValue: "IT Support", bindable: true },
+    subjectLabel: { label: { en: "Subject label" }, type: "Text", defaultValue: "Subject", bindable: true },
+    subjectPlaceholder: { label: { en: "Subject placeholder" }, type: "Text", defaultValue: "Short summary of the issue", bindable: true },
+    categoryLabel: { label: { en: "Category label" }, type: "Text", defaultValue: "Category", bindable: true },
+    categories: {
+      label: { en: "Categories (comma-separated)" }, type: "Text", bindable: true,
+      defaultValue: "Hardware, Software / App, Access / Login, Network, Other",
     },
-    notificationsId: { label: { en: "↳ applies to id" }, type: "Text", defaultValue: "notifications", bindable: true, section: "settings" },
-    tasksBadge: {
-      label: { en: "Tasks count (bind)" }, type: "Number", bindable: true, defaultValue: null,
-      /* wwEditor:start */
-      bindingValidation: { type: "number", tooltip: "Open tasks, e.g. collections.my_tasks?.data?.length" },
-      /* wwEditor:end */
+    priorityLabel: { label: { en: "Priority label" }, type: "Text", defaultValue: "Priority", bindable: true },
+    priorities: {
+      label: { en: "Priorities (comma-separated)" }, type: "Text", bindable: true,
+      defaultValue: "Low, Normal, High, Urgent",
     },
-    tasksId: { label: { en: "↳ applies to id" }, type: "Text", defaultValue: "tasks", bindable: true, section: "settings" },
-    marginBadge: {
-      label: { en: "Margin count (bind)" }, type: "Number", bindable: true, defaultValue: null,
-      /* wwEditor:start */
-      bindingValidation: { type: "number", tooltip: "Margin reviews, e.g. collections.margin_review?.data?.length" },
-      /* wwEditor:end */
-    },
-    marginId: { label: { en: "↳ applies to id" }, type: "Text", defaultValue: "margin-review", bindable: true, section: "settings" },
+    descLabel: { label: { en: "Description label" }, type: "Text", defaultValue: "Description", bindable: true },
+    descPlaceholder: { label: { en: "Description placeholder" }, type: "Text", defaultValue: "What happened? What were you trying to do? Steps to reproduce help a lot.", bindable: true },
+    allowAttachments: { label: { en: "Allow attachments" }, type: "OnOff", defaultValue: true, bindable: true },
+    filesLabel: { label: { en: "Attachments label" }, type: "Text", defaultValue: "Attachments", bindable: true },
+    filesHint: { label: { en: "Attachments hint" }, type: "Text", defaultValue: "Drop screenshots or files here, or click to browse", bindable: true },
+    maxFiles: { label: { en: "Max attachments" }, type: "Number", options: { min: 1, max: 20, step: 1 }, defaultValue: 10, bindable: true },
+    requiredError: { label: { en: "Validation message" }, type: "Text", defaultValue: "Please add a subject and a description.", bindable: true },
+    submitLabel: { label: { en: "Submit button label" }, type: "Text", defaultValue: "Submit ticket", bindable: true },
+    cancelLabel: { label: { en: "Cancel button label" }, type: "Text", defaultValue: "Cancel", bindable: true },
 
     // ---- Active state (bind to your current route / page) ----
     activeId: { label: { en: "Active destination id (bind)" }, type: "Text", defaultValue: "jobs", bindable: true },

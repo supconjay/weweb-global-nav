@@ -31,6 +31,105 @@
               </div>
             </div>
           </template>
+          <button v-if="content.showSupport !== false" type="button" class="pp-supportbtn" @click="openSupport">
+            <span class="pp-supportbtn__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('lifebuoy')"></path></svg></span>
+            <span class="pp-supportbtn__txt">
+              <strong>{{ content.supportLabel || 'IT Support' }}</strong>
+              <small>{{ content.supportSubLabel || 'Report a problem or request help' }}</small>
+            </span>
+          </button>
+        </div>
+      </div>
+    </transition>
+
+    <!-- IT support ticket form -->
+    <transition name="pp-fade">
+      <div v-if="supportOpen" class="pp-modal__backdrop" @click="closeSupport"></div>
+    </transition>
+    <transition name="pp-pop">
+      <div v-if="supportOpen" class="pp-modal" role="dialog" aria-label="IT support">
+        <div class="pp-modal__head">
+          <span class="pp-modal__title">
+            <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('lifebuoy')"></path></svg>
+            {{ content.supportTitle || 'IT Support' }}
+          </span>
+          <button type="button" class="pp-modal__x" aria-label="Close" @click="closeSupport">
+            <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('x')"></path></svg>
+          </button>
+        </div>
+
+        <div class="pp-modal__body">
+          <label class="pp-fld">
+            <span class="pp-fld__label">{{ content.subjectLabel || 'Subject' }} <em>*</em></span>
+            <input
+              ref="supportSubject"
+              v-model="supportSubject"
+              type="text"
+              class="pp-in"
+              :class="{ 'pp-in--err': supportErr && !supportSubject.trim() }"
+              :placeholder="content.subjectPlaceholder || 'Short summary of the issue'"
+            />
+          </label>
+
+          <div class="pp-fld__row">
+            <label v-if="categoryOptions.length" class="pp-fld">
+              <span class="pp-fld__label">{{ content.categoryLabel || 'Category' }}</span>
+              <select v-model="supportCategory" class="pp-in">
+                <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
+              </select>
+            </label>
+            <label v-if="priorityOptions.length" class="pp-fld">
+              <span class="pp-fld__label">{{ content.priorityLabel || 'Priority' }}</span>
+              <select v-model="supportPriority" class="pp-in">
+                <option v-for="p in priorityOptions" :key="p" :value="p">{{ p }}</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="pp-fld">
+            <span class="pp-fld__label">{{ content.descLabel || 'Description' }} <em>*</em></span>
+            <textarea
+              v-model="supportDesc"
+              class="pp-in pp-in--ta"
+              rows="5"
+              :class="{ 'pp-in--err': supportErr && !supportDesc.trim() }"
+              :placeholder="content.descPlaceholder || 'What happened? What were you trying to do? Steps to reproduce help a lot.'"
+            ></textarea>
+          </label>
+
+          <div v-if="content.allowAttachments !== false" class="pp-fld">
+            <span class="pp-fld__label">{{ content.filesLabel || 'Attachments' }}</span>
+            <div
+              class="pp-drop"
+              :class="{ 'pp-drop--over': supportDrag }"
+              @dragover.prevent="supportDrag = true"
+              @dragenter.prevent="supportDrag = true"
+              @dragleave.prevent="supportDrag = false"
+              @drop.prevent="onSupportDrop"
+              @click="pickFiles"
+            >
+              <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('upload')"></path></svg>
+              <span>{{ content.filesHint || 'Drop screenshots or files here, or click to browse' }}</span>
+            </div>
+            <input ref="supportFile" type="file" multiple class="pp-hidden" @change="onSupportPick" />
+            <ul v-if="supportFiles.length" class="pp-files">
+              <li v-for="(f, i) in supportFiles" :key="i" class="pp-file">
+                <span class="pp-file__ico"><svg class="pp-svg" v-bind="svgAttrs"><path :d="ic(f.isImage ? 'image' : 'file')"></path></svg></span>
+                <span class="pp-file__name">{{ f.name }}</span>
+                <span class="pp-file__size">{{ prettySize(f.size) }}</span>
+                <button type="button" class="pp-file__x" aria-label="Remove" @click.stop="removeSupportFile(i)">
+                  <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('x')"></path></svg>
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <p v-if="supportErr" class="pp-err">{{ supportErr }}</p>
+        </div>
+
+        <div class="pp-modal__foot">
+          <button type="button" class="pp-mbtn" @click="closeSupport">{{ content.cancelLabel || 'Cancel' }}</button>
+          <button type="button" class="pp-mbtn pp-mbtn--primary" @click="submitSupport">{{ content.submitLabel || 'Submit ticket' }}</button>
         </div>
       </div>
     </transition>
@@ -162,6 +261,11 @@ const ICONS = {
   target: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
   x: "M18 6L6 18M6 6l12 12",
   dot: "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0",
+  lifebuoy: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.9 4.9l4.2 4.2M14.9 14.9l4.2 4.2M19.1 4.9l-4.2 4.2M9.1 14.9l-4.2 4.2",
+  paperclip: "M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48",
+  upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+  image: "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zM8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21",
+  file: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6",
 };
 
 export default {
@@ -174,6 +278,15 @@ export default {
       sheetOpen: false,
       notifOpen: false,
       notifPos: { bottom: 80 },
+      // ---- IT support ticket ----
+      supportOpen: false,
+      supportSubject: "",
+      supportCategory: "",
+      supportPriority: "",
+      supportDesc: "",
+      supportFiles: [],
+      supportDrag: false,
+      supportErr: "",
     };
   },
   watch: {
@@ -181,21 +294,6 @@ export default {
     "content.activeChildId"(v) { this.curChild = v != null && v !== "" ? String(v) : null; },
   },
   computed: {
-    // Top-level bindable badge counts, keyed by the id of the destination (or
-    // sub-page) they belong to. Bind each to a collection count, e.g.
-    // collections.user_notifications.data.length. Overrides that row's own badge.
-    badgeOverrides() {
-      const map = {};
-      const add = (id, v) => {
-        if (id == null || id === "") return;
-        if (v == null || v === "") return;
-        map[String(id)] = v;
-      };
-      add(this.content.notificationsId || "notifications", this.content.notificationsBadge);
-      add(this.content.tasksId || "tasks", this.content.tasksBadge);
-      add(this.content.marginId || "margin-review", this.content.marginBadge);
-      return map;
-    },
     items() {
       const raw = Array.isArray(this.content.items) ? this.content.items : [];
       return raw
@@ -206,11 +304,11 @@ export default {
           icon: i.icon || "dot",
           kind: i.kind === "hub" ? "hub" : "portal",
           inBar: i.inBar === true,
-          badge: this.badgeFor(i.id, i.badge),
+          badge: i.badge,
           href: i.href || null,
           popover: i.popover || null,
           children: Array.isArray(i.children)
-            ? i.children.filter((c) => c && c.id != null && c.id !== "" && !this.truthy(c.hidden)).map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: this.badgeFor(c.id, c.badge), href: c.href || null }))
+            ? i.children.filter((c) => c && c.id != null && c.id !== "" && !this.truthy(c.hidden)).map((c) => ({ id: String(c.id), label: c.label != null && c.label !== "" ? c.label : String(c.id), icon: c.icon || null, badge: c.badge, href: c.href || null }))
             : [],
         }));
     },
@@ -239,6 +337,8 @@ export default {
     },
     moreActive() { return this.moreList.some((i) => i.id === this.curId); },
     moreBadgeTotal() { return this.moreList.reduce((s, i) => s + (this.badgeNum(i) || 0), 0); },
+    categoryOptions() { return this.csv(this.content.categories, ["Hardware", "Software / App", "Access / Login", "Network", "Other"]); },
+    priorityOptions() { return this.csv(this.content.priorities, ["Low", "Normal", "High", "Urgent"]); },
     notifItems() {
       const raw = this.content.notifications;
       if (Array.isArray(raw)) return raw;
@@ -254,7 +354,7 @@ export default {
       const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
       const mine = flat
         .filter((s) => s && s.id != null && s.id !== "" && !this.truthy(s.hidden) && String(s.parent) === String(this.curId))
-        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: this.badgeFor(s.id, s.badge), href: s.href || null }));
+        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge, href: s.href || null }));
       if (mine.length) return mine;
       return this.activeItem ? this.activeItem.children : [];
     },
@@ -276,11 +376,6 @@ export default {
   methods: {
     ic(name) { return ICONS[name] || ICONS.dot; },
     truthy(v) { return v === true || v === 1 || v === "1" || /^(true|yes|on)$/i.test(String(v == null ? "" : v)); },
-    // Bound count for this id wins; otherwise fall back to the row's own badge.
-    badgeFor(id, own) {
-      const o = this.badgeOverrides[String(id)];
-      return o != null && o !== "" ? o : own;
-    },
     initId() {
       if (this.content && this.content.activeId != null && this.content.activeId !== "") return String(this.content.activeId);
       const first = (Array.isArray(this.content && this.content.items) ? this.content.items : []).find((i) => i && i.id != null && i.id !== "");
@@ -367,6 +462,94 @@ export default {
       this.notifOpen = false;
       this.$emit("trigger-event", { name: "notificationClick", event: { id: this.notifId(n), index: i, notification: n } });
     },
+    // ---- IT support ticket ----
+    csv(raw, fallback) {
+      const arr = Array.isArray(raw)
+        ? raw
+        : (typeof raw === "string" && raw.trim() ? raw.split(",") : null);
+      if (!arr) return fallback;
+      const out = arr.map((s) => String(s).trim()).filter(Boolean);
+      return out.length ? out : fallback;
+    },
+    openSupport() {
+      this.sheetOpen = false;
+      this.notifOpen = false;
+      this.supportErr = "";
+      if (!this.supportCategory) this.supportCategory = this.categoryOptions[0] || "";
+      if (!this.supportPriority) this.supportPriority = this.priorityOptions[1] || this.priorityOptions[0] || "";
+      this.supportOpen = true;
+      this.$nextTick(() => { const el = this.$refs.supportSubject; if (el && el.focus) el.focus(); });
+    },
+    closeSupport() { this.supportOpen = false; this.supportDrag = false; },
+    resetSupport() {
+      this.supportSubject = "";
+      this.supportDesc = "";
+      this.supportErr = "";
+      this.supportFiles.forEach((f) => { if (f.url) { try { URL.revokeObjectURL(f.url); } catch (e) {} } });
+      this.supportFiles = [];
+      this.supportDrag = false;
+    },
+    pickFiles() { const el = this.$refs.supportFile; if (el && el.click) el.click(); },
+    onSupportPick(e) {
+      this.addSupportFiles(e && e.target ? e.target.files : null);
+      if (e && e.target) e.target.value = "";
+    },
+    onSupportDrop(e) {
+      this.supportDrag = false;
+      this.addSupportFiles(e && e.dataTransfer ? e.dataTransfer.files : null);
+    },
+    addSupportFiles(fileList) {
+      const files = Array.from(fileList || []);
+      const max = Number(this.content.maxFiles) > 0 ? Math.floor(Number(this.content.maxFiles)) : 10;
+      files.forEach((file) => {
+        if (this.supportFiles.length >= max) return;
+        const isImage = (file.type || "").indexOf("image/") === 0;
+        this.supportFiles.push({
+          file, name: file.name, size: file.size, type: file.type, isImage,
+          url: isImage ? URL.createObjectURL(file) : "",
+        });
+      });
+    },
+    removeSupportFile(i) {
+      const f = this.supportFiles[i];
+      if (f && f.url) { try { URL.revokeObjectURL(f.url); } catch (e) {} }
+      this.supportFiles.splice(i, 1);
+    },
+    prettySize(bytes) {
+      const n = Number(bytes);
+      if (!isFinite(n) || n <= 0) return "";
+      if (n < 1024) return n + " B";
+      if (n < 1024 * 1024) return (n / 1024).toFixed(0) + " KB";
+      return (n / (1024 * 1024)).toFixed(1) + " MB";
+    },
+    submitSupport() {
+      const subject = String(this.supportSubject || "").trim();
+      const description = String(this.supportDesc || "").trim();
+      if (!subject || !description) {
+        this.supportErr = this.content.requiredError || "Please add a subject and a description.";
+        return;
+      }
+      this.supportErr = "";
+      let pageUrl = "";
+      try { pageUrl = (typeof window !== "undefined" && window.location) ? window.location.href : ""; } catch (e) {}
+      this.$emit("trigger-event", {
+        name: "supportSubmit",
+        event: {
+          subject,
+          description,
+          category: this.supportCategory || "",
+          priority: this.supportPriority || "",
+          // Context that saves IT a round-trip
+          pageUrl,
+          activeId: this.curId || "",
+          activeChildId: this.curChild || "",
+          files: this.supportFiles.map((f) => f.file),
+          attachments: this.supportFiles.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+        },
+      });
+      this.supportOpen = false;
+      this.resetSupport();
+    },
     emitViewAll() { this.notifOpen = false; this.$emit("trigger-event", { name: "viewAllNotifications", event: {} }); },
     emitMarkAll() { this.$emit("trigger-event", { name: "markAllRead", event: {} }); },
   },
@@ -437,6 +620,68 @@ export default {
 
 .pp-svg { display: block; }
 .pp-root a { text-decoration: none; color: inherit; }
+
+/* Support entry in the More sheet */
+.pp-supportbtn { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-top: 2px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); color: var(--text); font-family: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
+.pp-supportbtn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.pp-supportbtn__ico { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.pp-supportbtn__ico .pp-svg { width: 20px; height: 20px; }
+.pp-supportbtn__txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pp-supportbtn__txt strong { font-size: 13.5px; font-weight: 700; }
+.pp-supportbtn__txt small { font-size: 12px; color: var(--text-muted); }
+
+/* Support modal */
+.pp-modal__backdrop { position: fixed; inset: 0; z-index: 960; background: rgba(16, 24, 40, .5); }
+.pp-modal {
+  position: fixed; z-index: 961; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 24px)); max-height: min(86vh, 720px); display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(16, 24, 40, .3); overflow: hidden;
+}
+.pp-modal__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.pp-modal__title { display: inline-flex; align-items: center; gap: 9px; font-size: 16px; font-weight: 700; color: var(--text); }
+.pp-modal__title .pp-svg { width: 19px; height: 19px; color: var(--accent); }
+.pp-modal__x { display: grid; place-items: center; width: 32px; height: 32px; border: none; border-radius: 9px; background: transparent; color: var(--text-muted); cursor: pointer; transition: background .15s, color .15s; }
+.pp-modal__x:hover { background: var(--surface-3); color: var(--text); }
+.pp-modal__x .pp-svg { width: 17px; height: 17px; }
+.pp-modal__body { padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.pp-modal__foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--border); background: var(--surface); }
+
+.pp-fld { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.pp-fld__row { display: flex; gap: 12px; flex-wrap: wrap; }
+.pp-fld__label { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.pp-fld__label em { color: var(--danger); font-style: normal; }
+.pp-in { width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text); font-family: inherit; font-size: 14px; outline: none; transition: border-color .15s, box-shadow .15s; }
+.pp-in:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent); }
+.pp-in--ta { resize: vertical; min-height: 104px; line-height: 1.5; }
+.pp-in--err { border-color: var(--danger); }
+select.pp-in { appearance: none; cursor: pointer; }
+
+.pp-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 20px 14px; border: 1.5px dashed var(--border-strong); border-radius: 12px; background: var(--surface-2); color: var(--text-muted); font-size: 13px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.pp-drop:hover, .pp-drop--over { border-color: var(--primary); color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.pp-drop .pp-svg { width: 20px; height: 20px; }
+.pp-hidden { display: none; }
+.pp-files { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pp-file { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.pp-file__ico { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: var(--surface-3); color: var(--text-muted); }
+.pp-file__ico .pp-svg { width: 14px; height: 14px; }
+.pp-file__name { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp-file__size { flex: none; font-size: 11.5px; color: var(--text-subtle); }
+.pp-file__x { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border: none; border-radius: 6px; background: transparent; color: var(--text-subtle); cursor: pointer; }
+.pp-file__x:hover { background: var(--surface-3); color: var(--danger); }
+.pp-file__x .pp-svg { width: 13px; height: 13px; }
+.pp-err { margin: 0; color: var(--danger); font-size: 13px; font-weight: 500; }
+
+.pp-mbtn { padding: 10px 16px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text-muted); font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s, filter .15s; }
+.pp-mbtn:hover { background: var(--surface-3); color: var(--text); }
+.pp-mbtn--primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.pp-mbtn--primary:hover { background: var(--primary); color: #fff; filter: brightness(1.05); }
+
+/* Mobile: 16px inputs so iOS doesn't zoom on focus */
+@media (max-width: 560px) {
+  .pp-in { font-size: 16px; }
+  .pp-fld__row { flex-direction: column; gap: 14px; }
+}
 
 /* Notifications popover */
 .pp-notif__backdrop { position: fixed; inset: 0; z-index: 950; }
