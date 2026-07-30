@@ -32,7 +32,8 @@ export default {
               icon: { label: "Icon name", type: "Text" },
               kind: { label: "Kind (portal/hub)", type: "Text" },
               inBar: { label: "Show in bottom bar", type: "OnOff" },
-              badge: { label: "Badge count", type: "Number" },
+              badge: { label: "Badge count (bindable)", type: "Number" },
+              hidden: { label: "Hide this item (bindable)", type: "OnOff" },
               href: { label: "Link URL (enables new-tab)", type: "Text" },
               popover: { label: "Popover (set to 'notifications')", type: "Text" },
             },
@@ -68,7 +69,8 @@ export default {
               id: { label: "Id (route/page key)", type: "Text" },
               label: { label: "Label", type: "Text" },
               icon: { label: "Icon name (optional)", type: "Text" },
-              badge: { label: "Badge count", type: "Number" },
+              badge: { label: "Badge count (bindable)", type: "Number" },
+              hidden: { label: "Hide this sub-page (bindable)", type: "OnOff" },
               href: { label: "Link URL (enables new-tab)", type: "Text" },
             },
           },
@@ -114,15 +116,6 @@ export default {
     showMarkAll: { label: { en: "Show 'Mark All as Read'" }, type: "OnOff", defaultValue: true, bindable: true },
     markAllLabel: { label: { en: "'Mark All' label" }, type: "Text", defaultValue: "Mark All as Read", bindable: true },
     notifEmptyText: { label: { en: "Empty text" }, type: "Text", defaultValue: "You're all caught up", bindable: true },
-
-    // ---- Role visibility + live badges (bindable, keyed by item id) ----
-    // hiddenIds: bind to a role-based list of ids to hide, e.g.
-    //   isAdmin ? [] : ['admin','reporting']  (accepts an array or "a,b,c").
-    //   Applies to top-level items AND sub-pages.
-    hiddenIds: { label: { en: "Hidden ids (bind, role-based)" }, type: "Array", bindable: true, defaultValue: [] },
-    // badges: bind to an object map { id: count } that overrides each item's
-    //   badge, e.g. { notifications: unreadCount, tasks: openTaskCount }.
-    badges: { label: { en: "Badge counts (bind, { id: count })" }, type: "Object", bindable: true, defaultValue: {} },
 
     // ---- Active state (bind to your current route / page) ----
     activeId: { label: { en: "Active destination id (bind)" }, type: "Text", defaultValue: "jobs", bindable: true },
