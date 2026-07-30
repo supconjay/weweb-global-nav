@@ -220,8 +220,9 @@
     </transition>
 
     <div class="pp-bar__wrap">
-      <!-- Collapsed handle to bring the sub-nav back -->
-      <div v-if="stripAvailable && !stripOpen" class="pp-handle__row">
+      <!-- Optional collapsed handle (off by default: tapping the active
+           destination in the bar re-opens the strip instead) -->
+      <div v-if="stripAvailable && !stripOpen && content.showReopenHandle === true" class="pp-handle__row">
         <button type="button" class="pp-handle" :aria-label="content.reopenLabel || 'Show pages'" @click="stripOpen = true">
           <svg class="pp-svg" v-bind="svgAttrs"><path :d="ic('chevron-up')"></path></svg>
           <span>{{ content.reopenLabel || 'Pages' }}</span>
@@ -492,6 +493,13 @@ export default {
   methods: {
     ic(name) { return ICONS[name] || ICONS.dot; },
     truthy(v) { return v === true || v === 1 || v === "1" || /^(true|yes|on)$/i.test(String(v == null ? "" : v)); },
+    hasChildrenFor(id) {
+      if (this.content.showContextual === false) return false;
+      const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
+      if (flat.some((s) => s && s.id != null && !this.truthy(s.hidden) && String(s.parent) === String(id))) return true;
+      const item = this.items.find((i) => i.id === String(id));
+      return !!(item && item.children && item.children.length);
+    },
     initId() {
       if (this.content && this.content.activeId != null && this.content.activeId !== "") return String(this.content.activeId);
       const first = (Array.isArray(this.content && this.content.items) ? this.content.items : []).find((i) => i && i.id != null && i.id !== "");
@@ -510,6 +518,13 @@ export default {
       return !!e && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (typeof e.button === "number" && e.button !== 0));
     },
     onSelect(it, e) {
+      // Tapping the destination you're already on toggles its sub-nav rather
+      // than re-navigating — this is how you get the strip back after hiding it.
+      if (it && it.id === this.effectiveId && this.hasChildrenFor(it.id)) {
+        if (e) e.preventDefault();
+        this.stripOpen = !this.stripOpen;
+        return;
+      }
       if (it && it.popover === "notifications") {
         // ctrl/cmd/middle-click still opens the hub in a new tab if an href is set
         if (it.href && this.isModifiedClick(e)) return;
@@ -587,14 +602,14 @@ export default {
       const out = arr.map((s) => String(s).trim()).filter(Boolean);
       return out.length ? out : fallback;
     },
-    // Routes through the same `navigate` workflow as every other destination.
+    // Has its own trigger so it shows up as a distinct workflow in the editor.
     openSettings() {
       this.sheetOpen = false;
       const id = this.content.settingsId != null && this.content.settingsId !== "" ? String(this.content.settingsId) : "settings";
       const label = this.content.settingsLabel || "Settings";
       this.curId = id;
       this.curChild = null;
-      this.$emit("trigger-event", { name: "navigate", event: { id, kind: "hub", label, item: { id, label, icon: "cog", kind: "hub" } } });
+      this.$emit("trigger-event", { name: "openSettings", event: { id, label } });
     },
     openSupport() {
       this.sheetOpen = false;

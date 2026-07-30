@@ -6,6 +6,7 @@ export default {
     { name: "notificationClick", label: { en: "On notification click" }, event: { id: "", index: 0, notification: {} } },
     { name: "viewAllNotifications", label: { en: "On 'View All' click" }, event: {} },
     { name: "markAllRead", label: { en: "On 'Mark All as Read' click" }, event: {} },
+    { name: "openSettings", label: { en: "On Settings click" }, event: { id: "", label: "" } },
     {
       name: "supportSubmit", label: { en: "On IT support ticket submitted" },
       event: { subject: "", description: "", priority: "", pageUrl: "", activeId: "", activeChildId: "", files: [], attachments: [] },
@@ -205,6 +206,9 @@ export default {
     showStripClose: { label: { en: "Show sub-nav close (X)" }, type: "OnOff", defaultValue: true, bindable: true },
     closeStripOnOutside: { label: { en: "Close sub-nav on outside click" }, type: "OnOff", defaultValue: true, bindable: true },
     closeStripLabel: { label: { en: "Sub-nav close tooltip" }, type: "Text", defaultValue: "Hide pages", bindable: true },
+    // Off by default so hiding the strip frees the space completely. Either way,
+    // tapping the destination you're already on toggles the strip back.
+    showReopenHandle: { label: { en: "Show sub-nav reopen pill" }, type: "OnOff", defaultValue: false, bindable: true },
     reopenLabel: { label: { en: "Sub-nav reopen label" }, type: "Text", defaultValue: "Pages", bindable: true },
     showLabels: { label: { en: "Show bar labels" }, type: "OnOff", defaultValue: true, bindable: true },
     fixed: { label: { en: "Pin to bottom of screen" }, type: "OnOff", defaultValue: true, bindable: true },
