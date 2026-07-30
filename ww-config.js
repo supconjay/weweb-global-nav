@@ -3,7 +3,7 @@ export default {
   triggerEvents: [
     { name: "navigate", label: { en: "On destination selected" }, event: { id: "", kind: "portal", label: "", item: {} } },
     { name: "navigateChild", label: { en: "On sub-page selected" }, event: { parentId: "", id: "", label: "", child: {} } },
-    { name: "notificationClick", label: { en: "On notification click" }, event: { id: "", index: 0, notification: {} } },
+    { name: "notificationClick", label: { en: "On notification click" }, event: { id: "", index: 0, path: "", read: false, notification: {} } },
     { name: "viewAllNotifications", label: { en: "On 'View All' click" }, event: {} },
     { name: "markAllRead", label: { en: "On 'Mark All as Read' click" }, event: {} },
     { name: "openSettings", label: { en: "On Settings click" }, event: { id: "", label: "" } },
@@ -129,17 +129,37 @@ export default {
     // events (notificationClick / viewAllNotifications / markAllRead) to workflows.
     notifications: {
       label: { en: "Notifications (list, bind)" }, type: "Array", bindable: true,
-      // Records: { id, title|text|message, created_at, read|is_read, avatar }
+      // Sample mirrors the notifications collection shape (nested tagged_by /
+      // activity objects, read_at timestamp, target_path).
       defaultValue: [
-        { id: "n1", text: "New work order assigned: JOB#4434 - 3", created_at: "2026-07-29T14:05:00+00:00", read: false, avatar: "" },
-        { id: "n2", text: "Estimate approved for 2777 Mathews Street", created_at: "2026-07-29T11:20:00+00:00", read: false, avatar: "" },
-        { id: "n3", text: "Vendor Check Electric confirmed scheduling", created_at: "2026-07-28T16:40:00+00:00", read: true, avatar: "" },
+        {
+          id: "bc658c27-e115-4659-9178-e1260cfc55f4",
+          creation_date: "2026-07-30T21:43:20.625+00:00",
+          target_path: "support-ticket-detail/1757",
+          read_at: null,
+          activity: { description: "<p><span class=\"mention\">@Jay Helvey</span> tstest</p>" },
+          tagged_by: { name: "Jay Helvey", headshot: "" },
+        },
+        {
+          id: "n2",
+          creation_date: "2026-07-29T11:20:00+00:00",
+          target_path: "estimates/138",
+          read_at: "2026-07-29T12:00:00+00:00",
+          activity: { description: "<p>Estimate approved for 2777 Mathews Street</p>" },
+          tagged_by: { name: "Amanda Terranova", headshot: "" },
+        },
       ],
     },
-    notifTextField: { label: { en: "Field: notification text" }, type: "Text", defaultValue: "text", bindable: true, section: "settings" },
-    notifTimeField: { label: { en: "Field: notification time" }, type: "Text", defaultValue: "created_at", bindable: true, section: "settings" },
-    notifReadField: { label: { en: "Field: read flag" }, type: "Text", defaultValue: "read", bindable: true, section: "settings" },
-    notifAvatarField: { label: { en: "Field: avatar" }, type: "Text", defaultValue: "avatar", bindable: true, section: "settings" },
+    // Field maps accept DOT PATHS for nested records, e.g. "tagged_by.name",
+    // "tagged_by.headshot", "activity.description".
+    notifTextField: { label: { en: "Field: notification text" }, type: "Text", defaultValue: "activity.description", bindable: true, section: "settings" },
+    notifNameField: { label: { en: "Field: sender name" }, type: "Text", defaultValue: "tagged_by.name", bindable: true, section: "settings" },
+    notifAvatarField: { label: { en: "Field: avatar" }, type: "Text", defaultValue: "tagged_by.headshot", bindable: true, section: "settings" },
+    notifTimeField: { label: { en: "Field: notification time" }, type: "Text", defaultValue: "creation_date", bindable: true, section: "settings" },
+    // Boolean flag OR a timestamp (any value = read, null/empty = unread).
+    notifReadField: { label: { en: "Field: read flag / read_at" }, type: "Text", defaultValue: "read_at", bindable: true, section: "settings" },
+    notifPathField: { label: { en: "Field: target path" }, type: "Text", defaultValue: "target_path", bindable: true, section: "settings" },
+    notifHtml: { label: { en: "Render notification text as HTML" }, type: "OnOff", defaultValue: true, bindable: true },
     notifTitle: { label: { en: "Popover title" }, type: "Text", defaultValue: "Notifications", bindable: true },
     showViewAll: { label: { en: "Show 'View All'" }, type: "OnOff", defaultValue: true, bindable: true },
     viewAllLabel: { label: { en: "'View All' label" }, type: "Text", defaultValue: "View All", bindable: true },

@@ -202,7 +202,13 @@
                 <svg v-else class="pp-svg" v-bind="svgAttrs"><path :d="ic('bell')"></path></svg>
               </span>
               <span class="pp-notif__txt">
-                <span class="pp-notif__msg">{{ notifText(n) || 'Notification' }}</span>
+                <span v-if="notifName(n)" class="pp-notif__who">{{ notifName(n) }}</span>
+                <span
+                  v-if="content.notifHtml !== false"
+                  class="pp-notif__msg"
+                  v-html="notifText(n) || 'Notification'"
+                ></span>
+                <span v-else class="pp-notif__msg">{{ stripHtml(notifText(n)) || 'Notification' }}</span>
                 <span v-if="notifTime(n)" class="pp-notif__time">{{ notifTime(n) }}</span>
               </span>
               <span v-if="!isRead(n)" class="pp-notif__dot"></span>
@@ -557,25 +563,56 @@ export default {
     closeSheet() { this.sheetOpen = false; },
     // ---- notifications popover ----
     str(v) { return v == null ? "" : String(v); },
+    // Supports dot paths so nested records map directly, e.g.
+    // "tagged_by.name" or "activity.description".
+    getPath(obj, path) {
+      if (!obj || !path) return undefined;
+      const parts = String(path).split(".");
+      let cur = obj;
+      for (let i = 0; i < parts.length; i++) {
+        if (cur == null || typeof cur !== "object") return undefined;
+        cur = cur[parts[i]];
+      }
+      return cur;
+    },
     field(n, key, fbs) {
       if (!n) return "";
-      if (key && n[key] != null && n[key] !== "") return n[key];
-      for (let i = 0; i < (fbs || []).length; i++) { if (n[fbs[i]] != null && n[fbs[i]] !== "") return n[fbs[i]]; }
+      const v = this.getPath(n, key);
+      if (v != null && v !== "") return v;
+      for (let i = 0; i < (fbs || []).length; i++) {
+        const f = this.getPath(n, fbs[i]);
+        if (f != null && f !== "") return f;
+      }
       return "";
     },
-    notifText(n) { return this.str(this.field(n, this.content.notifTextField, ["title", "text", "message", "body", "description"])); },
+    stripHtml(s) { return String(s == null ? "" : s).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(); },
+    notifName(n) { return this.str(this.field(n, this.content.notifNameField, ["tagged_by.name", "author", "user.name", "name"])); },
+    notifPath(n) { return this.str(this.field(n, this.content.notifPathField, ["target_path", "path", "url", "link"])); },
+    notifText(n) { return this.str(this.field(n, this.content.notifTextField, ["activity.description", "title", "text", "message", "body", "description"])); },
     notifTime(n) {
-      const raw = this.field(n, this.content.notifTimeField, ["time", "created_at", "createdAt", "date"]);
+      const raw = this.field(n, this.content.notifTimeField, ["creation_date", "time", "created_at", "createdAt", "date"]);
       if (!raw) return "";
       const d = new Date(raw);
       if (isNaN(d)) return String(raw);
       return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
     },
+    // Works with a boolean flag (read: true) OR a timestamp field where any
+    // value means read and null/empty means unread (read_at).
     isRead(n) {
-      const v = this.field(n, this.content.notifReadField, ["read", "is_read", "readAt", "seen"]);
-      return v === true || v === 1 || v === "1" || /^(true|yes)$/i.test(String(v == null ? "" : v));
+      const key = this.content.notifReadField || "read_at";
+      let v = this.getPath(n, key);
+      if (v === undefined) {
+        const fbs = ["read_at", "read", "is_read", "readAt", "seen"];
+        for (let i = 0; i < fbs.length; i++) {
+          const f = this.getPath(n, fbs[i]);
+          if (f !== undefined) { v = f; break; }
+        }
+      }
+      if (v == null || v === "" || v === false || v === 0) return false;
+      if (/^(false|no|0)$/i.test(String(v))) return false;
+      return true;
     },
-    notifAvatar(n) { return this.str(this.field(n, this.content.notifAvatarField, ["avatar", "headshot", "image", "photo"])); },
+    notifAvatar(n) { return this.str(this.field(n, this.content.notifAvatarField, ["tagged_by.headshot", "avatar", "headshot", "image", "photo"])); },
     notifId(n) { return this.field(n, "id", ["_id", "uuid", "key"]) || ""; },
     toggleNotif(e) {
       this.sheetOpen = false;
@@ -591,7 +628,10 @@ export default {
     closeNotif() { this.notifOpen = false; },
     onNotifClick(n, i) {
       this.notifOpen = false;
-      this.$emit("trigger-event", { name: "notificationClick", event: { id: this.notifId(n), index: i, notification: n } });
+      this.$emit("trigger-event", {
+        name: "notificationClick",
+        event: { id: this.notifId(n), index: i, path: this.notifPath(n), read: this.isRead(n), notification: n },
+      });
     },
     // ---- IT support ticket ----
     csv(raw, fallback) {
@@ -959,7 +999,11 @@ select.pp-in { appearance: none; cursor: pointer; }
 .pp-notif__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .pp-notif__avatar .pp-svg { width: 17px; height: 17px; }
 .pp-notif__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.pp-notif__msg { font-size: 13.5px; color: var(--text); overflow-wrap: anywhere; }
+.pp-notif__who { font-size: 13px; font-weight: 700; color: var(--text); }
+.pp-notif__msg { font-size: 13.5px; color: var(--text-muted); overflow-wrap: anywhere; }
+.pp-notif__msg :deep(p) { margin: 0; }
+.pp-notif__msg :deep(a) { color: var(--info, #3b82f6); }
+.pp-notif__msg :deep(.mention) { color: var(--accent); font-weight: 600; background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px; padding: 0 4px; }
 .pp-notif__time { font-size: 12px; color: var(--text-subtle); }
 .pp-notif__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px; }
 .pp-notif__empty { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 34px 16px; color: var(--text-subtle); }
