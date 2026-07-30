@@ -13,7 +13,13 @@ export default {
     //   { id, label, icon, kind, inBar, badge }
     //   kind:   "portal" (main workspace) | "hub" (quick-access global tool)
     //   inBar:  true -> show directly in the bottom bar; the rest go under "More"
-    //   badge:  number (or bindable) -> red count bubble (Notifications, Tasks...)
+    //   badge:  number -> red count bubble (Notifications, Tasks...)
+    //   hidden: true -> omit this destination entirely (role-based visibility)
+    //
+    // DYNAMIC badge / hidden: WeWeb cannot bind individual fields INSIDE an array
+    // row (only whole properties get a bind toggle), so bind THIS ARRAY as a whole
+    // to a formula and compute those fields per row. The component reads `badge`
+    // and `hidden` off each row either way, so a static list still works.
     //   href:   set the destination URL/path -> the item renders as a real <a> so
     //           right-click / middle-click / cmd-click open it in a new tab.
     //           Plain left-click still fires `navigate` for fast in-app routing.
@@ -22,7 +28,16 @@ export default {
     //   send, target, dot
     items: {
       label: { en: "Destinations" }, type: "Array", bindable: true,
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "array",
+        tooltip: "Bind the WHOLE list to make badge/hidden dynamic (WeWeb can't bind individual fields inside an array row). Example:\n[\n  { id: 'home', label: 'Home', icon: 'home', kind: 'hub', inBar: true },\n  { id: 'notifications', label: 'Notifications', icon: 'bell', kind: 'hub', popover: 'notifications', badge: collections.user_notifications.data.length },\n  { id: 'admin', label: 'Admin', icon: 'shield', kind: 'portal', hidden: !isAdmin }\n]",
+      },
+      propertyHelp: { tooltip: "Each row: { id, label, icon, kind, inBar, badge, hidden, href, popover }. Edit rows here for a static nav, or bind the whole array for live badge counts and role-based hiding." },
+      /* wwEditor:end */
       options: {
+        expandable: true,
+        getItemLabel(item) { return (item && item.label) || (item && item.id) || "Destination"; },
         item: {
           type: "Object",
           options: {
@@ -32,8 +47,8 @@ export default {
               icon: { label: "Icon name", type: "Text" },
               kind: { label: "Kind (portal/hub)", type: "Text" },
               inBar: { label: "Show in bottom bar", type: "OnOff" },
-              badge: { label: "Badge count (bindable)", type: "Number" },
-              hidden: { label: "Hide this item (bindable)", type: "OnOff" },
+              badge: { label: "Badge count", type: "Number" },
+              hidden: { label: "Hide this item", type: "OnOff" },
               href: { label: "Link URL (enables new-tab)", type: "Text" },
               popover: { label: "Popover (set to 'notifications')", type: "Text" },
             },
@@ -60,7 +75,16 @@ export default {
     // rows whose parent matches the active destination.
     subPages: {
       label: { en: "Sub-pages (contextual strip)" }, type: "Array", bindable: true,
+      /* wwEditor:start */
+      bindingValidation: {
+        type: "array",
+        tooltip: "Bind the WHOLE list for dynamic badge/hidden. Each row needs a `parent` matching a destination id, e.g.\n[{ parent: 'jobs', id: 'projects', label: 'Projects', icon: 'folder', hidden: !canSeeProjects }]",
+      },
+      propertyHelp: { tooltip: "Each row: { parent, id, label, icon, badge, hidden, href }. Rows show when their parent destination is active." },
+      /* wwEditor:end */
       options: {
+        expandable: true,
+        getItemLabel(item) { return (item && item.label) || (item && item.id) || "Sub-page"; },
         item: {
           type: "Object",
           options: {
@@ -69,8 +93,8 @@ export default {
               id: { label: "Id (route/page key)", type: "Text" },
               label: { label: "Label", type: "Text" },
               icon: { label: "Icon name (optional)", type: "Text" },
-              badge: { label: "Badge count (bindable)", type: "Number" },
-              hidden: { label: "Hide this sub-page (bindable)", type: "OnOff" },
+              badge: { label: "Badge count", type: "Number" },
+              hidden: { label: "Hide this sub-page", type: "OnOff" },
               href: { label: "Link URL (enables new-tab)", type: "Text" },
             },
           },
