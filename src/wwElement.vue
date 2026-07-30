@@ -170,7 +170,17 @@ export default {
     moreActive() { return this.moreList.some((i) => i.id === this.curId); },
     moreBadgeTotal() { return this.moreList.reduce((s, i) => s + (this.badgeNum(i) || 0), 0); },
     activeItem() { return this.items.find((i) => i.id === this.curId) || null; },
-    contextChildren() { return this.activeItem ? this.activeItem.children : []; },
+    // Sub-pages come from a flat top-level `subPages` array (each row carries a
+    // `parent` id) — this keeps the WeWeb config one level deep. Falls back to a
+    // nested `children` array on the item if you prefer that shape.
+    contextChildren() {
+      const flat = Array.isArray(this.content.subPages) ? this.content.subPages : [];
+      const mine = flat
+        .filter((s) => s && s.id != null && s.id !== "" && s.hidden !== true && String(s.parent) === String(this.curId))
+        .map((s) => ({ id: String(s.id), label: s.label != null && s.label !== "" ? s.label : String(s.id), icon: s.icon || null, badge: s.badge }));
+      if (mine.length) return mine;
+      return this.activeItem ? this.activeItem.children : [];
+    },
     svgAttrs() {
       return { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" };
     },
@@ -182,7 +192,7 @@ export default {
       return {
         "--pp-primary": this.content.primaryColor || "#10b981",
         "--pp-accent": this.content.accentColor || "#6366f1",
-        "--pp-max": (this.content.maxWidth != null && this.content.maxWidth !== "" ? this.content.maxWidth : 720) + "px",
+        "--pp-max": (this.content.maxWidth != null && this.content.maxWidth !== "" ? this.content.maxWidth : 640) + "px",
       };
     },
   },
@@ -287,9 +297,18 @@ export default {
 .pp-slide-enter-active, .pp-slide-leave-active { transition: transform .24s cubic-bezier(.22,.61,.36,1); }
 .pp-slide-enter-from, .pp-slide-leave-to { transform: translateY(100%); }
 
-/* Desktop: roomier bar, labels beside icons optional */
-@media (min-width: 900px) {
-  .pp-bar { padding-top: 8px; padding-bottom: 8px; }
+/* Desktop: a clean floating, centered, rounded bar instead of a full-width band */
+@media (min-width: 840px) {
+  .pp-root--fixed .pp-bar__wrap {
+    margin: 0 auto 16px; border: 1px solid var(--border); border-radius: 18px;
+    overflow: hidden; background: var(--surface);
+    box-shadow: 0 10px 34px rgba(16, 24, 40, .14), 0 2px 6px rgba(16, 24, 40, .06);
+  }
+  .pp-root--fixed.pp-dark .pp-bar__wrap { box-shadow: 0 12px 34px rgba(0,0,0,.5); }
+  .pp-root--fixed .pp-context { background: transparent; border-top: none; border-bottom: 1px solid var(--border); }
+  .pp-root--fixed .pp-bar { border-top: none; box-shadow: none; background: transparent; padding: 8px 10px; }
+  .pp-item { flex: 0 1 128px; }
+  .pp-item:hover { background: var(--surface-2); }
   .pp-item__ico .pp-svg { width: 22px; height: 22px; }
   .pp-item__label { font-size: 12px; }
 }

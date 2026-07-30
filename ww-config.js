@@ -6,12 +6,11 @@ export default {
   ],
   properties: {
     // ---- Navigation model ----
-    // items: the full destination list. Each item:
-    //   { id, label, icon, kind, inBar, badge, children: [ { id, label, icon, badge } ] }
+    // items: the top-level destinations (bar + More sheet). Each item:
+    //   { id, label, icon, kind, inBar, badge }
     //   kind:   "portal" (main workspace) | "hub" (quick-access global tool)
     //   inBar:  true -> show directly in the bottom bar; the rest go under "More"
     //   badge:  number (or bindable) -> red count bubble (Notifications, Tasks...)
-    //   children: the portal's sub-pages -> shown as the contextual strip when active
     // icon names: home, bell, check-square, calendar, book, briefcase, users, truck,
     //   chart, shield, grid, folder, wrench, map, dollar, clipboard, layers, compass,
     //   send, target, dot
@@ -28,43 +27,57 @@ export default {
               kind: { label: "Kind (portal/hub)", type: "Text" },
               inBar: { label: "Show in bottom bar", type: "OnOff" },
               badge: { label: "Badge count", type: "Number" },
-              children: {
-                label: "Sub-pages", type: "Array",
-                options: { item: { type: "Object", options: { item: {
-                  id: { label: "Id", type: "Text" },
-                  label: { label: "Label", type: "Text" },
-                  icon: { label: "Icon name", type: "Text" },
-                  badge: { label: "Badge count", type: "Number" },
-                } } } },
-              },
             },
           },
         },
       },
       defaultValue: [
-        { id: "home", label: "Home", icon: "home", kind: "hub", inBar: true, children: [] },
-        {
-          id: "jobs", label: "Jobs", icon: "briefcase", kind: "portal", inBar: true,
-          children: [
-            { id: "projects", label: "Projects", icon: "folder" },
-            { id: "trackers", label: "Trackers", icon: "target" },
-            { id: "calendar", label: "Calendar", icon: "calendar" },
-            { id: "estimates", label: "Estimates", icon: "clipboard" },
-            { id: "buckets", label: "Buckets", icon: "layers" },
-            { id: "dispatch", label: "Dispatch", icon: "send" },
-            { id: "margin", label: "Margin", icon: "dollar" },
-            { id: "coordination", label: "Coordination", icon: "compass" },
-            { id: "pm-board", label: "PM Board", icon: "grid" },
-          ],
+        { id: "home", label: "Home", icon: "home", kind: "hub", inBar: true },
+        { id: "jobs", label: "Jobs", icon: "briefcase", kind: "portal", inBar: true },
+        { id: "customers", label: "Customers", icon: "users", kind: "portal", inBar: true },
+        { id: "vendors", label: "Vendors", icon: "truck", kind: "portal", inBar: true },
+        { id: "notifications", label: "Notifications", icon: "bell", kind: "hub", inBar: false, badge: 3 },
+        { id: "tasks", label: "Tasks", icon: "check-square", kind: "hub", inBar: false, badge: 1 },
+        { id: "vendor-calendar", label: "Vendor Calendar", icon: "calendar", kind: "hub", inBar: false },
+        { id: "price-guide", label: "Price Guide", icon: "book", kind: "hub", inBar: false },
+        { id: "reporting", label: "Reporting", icon: "chart", kind: "portal", inBar: false },
+        { id: "admin", label: "Admin", icon: "shield", kind: "portal", inBar: false },
+      ],
+    },
+
+    // subPages: the contextual strip. FLAT list (one level deep, so WeWeb doesn't
+    // crop the fields). `parent` is the item id it belongs to; the strip shows the
+    // rows whose parent matches the active destination.
+    subPages: {
+      label: { en: "Sub-pages (contextual strip)" }, type: "Array", bindable: true,
+      options: {
+        item: {
+          type: "Object",
+          options: {
+            item: {
+              parent: { label: "Parent item id", type: "Text" },
+              id: { label: "Id (route/page key)", type: "Text" },
+              label: { label: "Label", type: "Text" },
+              icon: { label: "Icon name (optional)", type: "Text" },
+              badge: { label: "Badge count", type: "Number" },
+            },
+          },
         },
-        { id: "customers", label: "Customers", icon: "users", kind: "portal", inBar: true, children: [] },
-        { id: "vendors", label: "Vendors", icon: "truck", kind: "portal", inBar: true, children: [] },
-        { id: "notifications", label: "Notifications", icon: "bell", kind: "hub", inBar: false, badge: 3, children: [] },
-        { id: "tasks", label: "Tasks", icon: "check-square", kind: "hub", inBar: false, badge: 1, children: [] },
-        { id: "vendor-calendar", label: "Vendor Calendar", icon: "calendar", kind: "hub", inBar: false, children: [] },
-        { id: "price-guide", label: "Price Guide", icon: "book", kind: "hub", inBar: false, children: [] },
-        { id: "reporting", label: "Reporting", icon: "chart", kind: "portal", inBar: false, children: [] },
-        { id: "admin", label: "Admin", icon: "shield", kind: "portal", inBar: false, children: [] },
+      },
+      defaultValue: [
+        { parent: "jobs", id: "projects", label: "Projects", icon: "folder" },
+        { parent: "jobs", id: "trackers", label: "Trackers", icon: "target" },
+        { parent: "jobs", id: "calendar", label: "Calendar", icon: "calendar" },
+        { parent: "jobs", id: "estimates", label: "Estimates", icon: "clipboard" },
+        { parent: "jobs", id: "buckets", label: "Buckets", icon: "layers" },
+        { parent: "jobs", id: "dispatch", label: "Dispatch", icon: "send" },
+        { parent: "jobs", id: "margin", label: "Margin", icon: "dollar" },
+        { parent: "jobs", id: "coordination", label: "Coordination", icon: "compass" },
+        { parent: "jobs", id: "pm-board", label: "PM Board", icon: "grid" },
+        { parent: "customers", id: "directory", label: "Directory", icon: "users" },
+        { parent: "customers", id: "properties", label: "Properties", icon: "map" },
+        { parent: "vendors", id: "vendor-list", label: "Vendor List", icon: "truck" },
+        { parent: "vendors", id: "vendor-onboarding", label: "Onboarding", icon: "clipboard" },
       ],
     },
 
@@ -77,7 +90,7 @@ export default {
     showContextual: { label: { en: "Show sub-page strip" }, type: "OnOff", defaultValue: true, bindable: true },
     showLabels: { label: { en: "Show bar labels" }, type: "OnOff", defaultValue: true, bindable: true },
     fixed: { label: { en: "Pin to bottom of screen" }, type: "OnOff", defaultValue: true, bindable: true },
-    maxWidth: { label: { en: "Max width (px, desktop)" }, type: "Number", options: { min: 320, max: 1600, step: 10 }, defaultValue: 720, bindable: true },
+    maxWidth: { label: { en: "Max width (px, desktop)" }, type: "Number", options: { min: 320, max: 1600, step: 10 }, defaultValue: 640, bindable: true },
     moreLabel: { label: { en: "More button label" }, type: "Text", defaultValue: "More", bindable: true },
     hubsLabel: { label: { en: "Sheet: hubs group label" }, type: "Text", defaultValue: "Quick access", bindable: true },
     portalsLabel: { label: { en: "Sheet: portals group label" }, type: "Text", defaultValue: "Portals", bindable: true },
